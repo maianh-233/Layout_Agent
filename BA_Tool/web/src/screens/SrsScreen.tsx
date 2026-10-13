@@ -141,7 +141,7 @@ export function SrsScreen({ project, actions, showChanges }: Props) {
       {project.registryErrors && project.registryErrors.length > 0 && (
         <details className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
           <summary className="cursor-pointer font-semibold">
-            Sổ đăng ký mã (_registry.json) còn {project.registryErrors.length} lỗi — Phần 12 và bảng phân quyền có thể chưa đầy đủ
+            Registry / phân quyền / design tokens còn {project.registryErrors.length} lỗi — Phần 12, bảng phân quyền hoặc prototype có thể chưa đầy đủ
           </summary>
           <ul className="mt-2 list-disc space-y-1 pl-5">
             {project.registryErrors.map((e) => (

@@ -52,7 +52,7 @@ const MAX_TURNS: Record<JobKind, number> = {
   'ui-followup': 30,
   'ui-questions': 30,
   'business-srs': 250,
-  'ui-srs': 250,
+  'ui-srs': 350,
   prototype: 400,
 };
 
@@ -62,8 +62,8 @@ const LARGE_MAX_TURNS: Record<JobKind, number> = {
   'business-followup': 50,
   'ui-followup': 40,
   'ui-questions': 50,
-  'business-srs': 600,
-  'ui-srs': 500,
+  'business-srs': 450,
+  'ui-srs': 700,
   prototype: 900,
 };
 

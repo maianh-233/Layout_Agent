@@ -20,6 +20,7 @@ import {
 } from './projects.js';
 import { FollowupSetSchema, QuestionSetSchema, projectTypeOf, usesRegistry, type JobKind, type Phase, type Project } from './schemas.js';
 import { checkRegistry, writeGenerated } from './registry.js';
+import { checkDesignTokens } from './design.js';
 
 export type JobEvent =
   | AgentEvent
@@ -174,27 +175,38 @@ async function runJob(job: Job, params: { targetDir?: string }) {
   };
 
   /**
-   * Kiểm tra registry + phân quyền; sai thì cho AI sửa đúng các lỗi đó một lần.
+   * Kiểm tra registry + phân quyền (+ design tokens ở bước giao diện); sai thì cho AI sửa đúng các lỗi đó một lần.
    * Sau đó sinh Phần 12 và bảng 4.2 bằng code. Trả về lỗi còn lại (không chặn kết quả SRS).
    */
   const finishRegistry = async (phase: Phase, mode: JobKind): Promise<string[]> => {
     const srs = srsDir(job.slug);
-    emit(job, { type: 'step', text: 'Đang kiểm tra sổ đăng ký mã (_registry.json) và ma trận phân quyền…' });
-    let check = await checkRegistry(srs, phase);
-    if (!check.ok) {
-      emit(job, { type: 'step', text: `Registry có ${check.errors.length} lỗi, đang yêu cầu AI sửa…` });
+    emit(job, {
+      type: 'step',
+      text: phase === 'ui'
+        ? 'Đang kiểm tra registry, phân quyền và design tokens…'
+        : 'Đang kiểm tra sổ đăng ký mã (_registry.json) và ma trận phân quyền…',
+    });
+    const checkAll = async () => {
+      const check = await checkRegistry(srs, phase);
+      const errors = [...check.errors, ...(phase === 'ui' ? await checkDesignTokens(srs) : [])];
+      return { check, errors };
+    };
+    let { check, errors } = await checkAll();
+    if (errors.length) {
+      emit(job, { type: 'step', text: `Có ${errors.length} lỗi định dạng / tham chiếu, đang yêu cầu AI sửa…` });
       await runAs(
         mode,
-        `SỬA REGISTRY: SRS đã viết xong. Chỉ sửa các lỗi dưới đây trong srs/_registry.json, srs/_permissions.json ` +
-          `(và file SRS liên quan nếu lỗi do thiếu file / thiếu mã). Không viết lại SRS. Định dạng: references/registry-guide.md.\n` +
-          check.errors.map((e) => `- ${e}`).join('\n'),
+        `SỬA REGISTRY: SRS đã viết xong. Chỉ sửa các lỗi dưới đây trong srs/_registry.json, srs/_permissions.json, srs/_design-tokens.json ` +
+          `(và file SRS liên quan nếu lỗi do thiếu file / thiếu mã). Không viết lại SRS. ` +
+          `Định dạng: references/registry-guide.md, references/design-guide.md mục 1.\n` +
+          errors.map((e) => `- ${e}`).join('\n'),
       );
-      check = await checkRegistry(srs, phase);
+      ({ check, errors } = await checkAll());
     }
     const written = await writeGenerated(srs, check, { uiDone: phase === 'ui' });
     if (written.length) emit(job, { type: 'step', text: `Đã sinh tự động: ${written.join(', ')}.` });
-    if (!check.ok) emit(job, { type: 'step', text: `Registry còn ${check.errors.length} lỗi — xem cảnh báo ở màn hình SRS.` });
-    return check.errors;
+    if (errors.length) emit(job, { type: 'step', text: `Còn ${errors.length} lỗi — xem cảnh báo ở màn hình SRS.` });
+    return errors;
   };
 
   switch (job.kind) {

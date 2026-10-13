@@ -2,7 +2,7 @@
 
 > Chỉ dùng để gợi ý câu hỏi cho đủ ý. Xem quy tắc ở [README.md](README.md).
 
-**Số câu hỏi nghiệp vụ:** 45–80. **Số câu hỏi giao diện:** 18–30.
+**Số câu hỏi nghiệp vụ:** 30–50 (gọn, đủ ý). **Số câu hỏi giao diện:** 25–38 (kỹ — phần quan trọng nhất).
 
 Áp dụng cho phần mềm quản lý nội bộ không phải CRM / ERP chuẩn: quản lý trường học, phòng khám, khách sạn, dự án, tài sản, bảo trì, nhân sự, văn bản… Vì không có danh sách module cố định, hãy **xác định module từ yêu cầu ban đầu** rồi dùng các khung dưới đây để hỏi cho đủ.
 

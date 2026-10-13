@@ -2,7 +2,7 @@
 
 > Chỉ dùng để gợi ý câu hỏi cho đủ ý. Xem quy tắc ở [README.md](README.md).
 
-**Số câu hỏi nghiệp vụ:** 70–120. **Số câu hỏi giao diện:** 20–35.
+**Số câu hỏi nghiệp vụ:** 45–70 (gọn, đủ ý). **Số câu hỏi giao diện:** 28–42 (kỹ — phần quan trọng nhất).
 
 ERP thường chỉ triển khai **một phần** các module. Luôn hỏi câu "cổng" của từng module trước, rồi mới hỏi chi tiết module đó (chi tiết module chỉ hiện khi khách xác nhận có module).
 

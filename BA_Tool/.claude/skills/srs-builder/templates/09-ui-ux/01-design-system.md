@@ -6,22 +6,37 @@
 
 ## 9.2. Design System — Hệ thống thiết kế
 
-<!-- nội dung -->
+<!-- Phong cách, mật độ hiển thị (density), bộ icon, chế độ sáng/tối. SRS_MODE: registry → cùng giá trị ghi ở srs/_design-tokens.json -->
 
 ## 9.3. Color Palette — Bảng màu
 
-| Vai trò màu | Mã HEX | Dùng cho |
+| Token | Sắc độ (HEX) | Dùng cho |
 |---|---|---|
+| primary | 50 … 900 | |
+| neutral | 0, 50 … 900 | |
+| success / warning / danger / info | 50, 100, 500, 600, 700 | |
+
+### Màu trạng thái chứng từ
+
+| Chứng từ | Trạng thái | Tone | Badge (nền / chữ) |
+|---|---|---|---|
 
 <!-- nội dung -->
 
 ## 9.4. Typography — Kiểu chữ
 
-| Cấp | Font | Cỡ | Line-height | Weight |
+| Token | Dùng cho | Cỡ | Line-height | Weight |
 |---|---|---|---|---|
 
 <!-- nội dung -->
 
 ## 9.5. Spacing and Layout — Khoảng cách và bố cục
 
-<!-- nội dung -->
+| Token | Giá trị | Dùng cho |
+|---|---|---|
+| radius.sm / md / lg / xl | | |
+| shadow.sm / md / lg | | |
+| breakpoints | | |
+| layout.sidebarWidth / topbarHeight / tableRowHeight / controlHeight | | |
+
+<!-- nội dung: lưới, khoảng cách chuẩn giữa các khối -->

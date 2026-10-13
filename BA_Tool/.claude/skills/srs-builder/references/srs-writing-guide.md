@@ -9,6 +9,15 @@
 5. Viết tiếng Việt, câu ngắn, rõ. Giữ thuật ngữ tiếng Anh trong ngoặc khi cần, ví dụ "Ca sử dụng (Use Case)".
 6. Ưu tiên bảng cho danh sách có nhiều thuộc tính.
 
+### Mức độ chi tiết — giao diện kỹ, nghiệp vụ gọn
+
+**Phần 9 (giao diện) là phần quan trọng nhất**: prototype phải đúng ý khách và đội frontend dựng tiếp từ đó → viết theo [design-guide.md](design-guide.md), chi tiết đến từng cột, trường, nút, quyền, trạng thái.
+
+**Phần nghiệp vụ (0–8, 10–13) viết gọn nhưng đủ ý:**
+- Dùng bảng và gạch đầu dòng; không viết đoạn văn dài, không lặp lại cùng nội dung ở nhiều nơi (dẫn chiếu `xem 5.6` thay vì chép lại).
+- **Giữ chi tiết** ở những gì prototype và frontend cần: vai trò & phân quyền, chứng từ & trạng thái, thực thể & trường dữ liệu (7.4), quy tắc ảnh hưởng tới màn hình (validation, đánh mã, làm tròn, điều kiện duyệt), công thức KPI của dashboard.
+- **Viết ngắn**: 5.3 chỉ luồng chính của module; 5.5 chỉ cho luồng liên module / tích hợp ngoài (còn lại ghi `Không áp dụng — xem 5.3`); 5.8 mỗi FR 1–2 test case (thành công + lỗi chính); Phần 10, 11 ở mức tóm tắt; 13.1–13.5 dẫn chiếu tới sơ đồ đã có thay vì vẽ lại.
+
 ## 2. Quy ước mã (ghi lại ở 12.1)
 
 > **`SRS_MODE: registry`** (dự án mới): dùng quy ước `<LOẠI>-<MODULE>-<3 số>` và sổ đăng ký mã theo [registry-guide.md](registry-guide.md); bảng dưới chỉ áp dụng cho `SRS_MODE: legacy` (dự án cũ).
@@ -60,6 +69,8 @@ Mọi sơ đồ viết bằng khối ```` ```mermaid ````. Giữ sơ đồ gọn
 
 ## 5. Bước giao diện (ui-srs)
 
+> **`SRS_MODE: registry`**: làm theo [design-guide.md](design-guide.md) (design tokens `_design-tokens.json`, thư viện component, đặc tả màn hình đầy đủ 9 mục). Các gạch đầu dòng dưới đây là tối thiểu cho `SRS_MODE: legacy`.
+
 - `09-ui-ux/03-screen-inventory.md`: bảng `SCR-xxx | Tên màn hình | slug | Vai trò | Module | FR liên quan | File đặc tả`.
 - Mỗi `screens/<screen-slug>.md`: 9.10 wireframe (khối ASCII hoặc mô tả theo vùng), 9.11 đặc tả (mục đích, thành phần, dữ liệu hiển thị, hành động → kết quả), 9.13 form/bảng (trường, kiểu, bắt buộc, validation, thông báo lỗi).
 - Design system (9.2–9.5) lấy từ câu trả lời giao diện; nếu khách không có, đề xuất bảng màu/font phù hợp ngành và gắn `[ĐỀ XUẤT]`. Mã màu ghi HEX.
@@ -86,7 +97,7 @@ Chỉ viết khi **có dữ liệu từ câu trả lời** (kể cả câu hỏi
 | Tiền tệ, làm tròn, múi giờ | 3.5 (BR) + 6.12 | Đơn vị tiền, số lẻ, cách làm tròn từng loại số (đơn giá, thành tiền, thuế), định dạng ngày, múi giờ. |
 | Báo cáo & dashboard | Module `RPT` (`05-functional/rpt.md`) | Bảng `Báo cáo / KPI \| Công thức \| Nguồn dữ liệu (ENT) \| Bộ lọc \| Vai trò được xem \| Kỳ cập nhật \| FR`. Công thức ghi rõ phép tính, ví dụ `Tỉ lệ thắng = số cơ hội Thắng / (Thắng + Thua) trong kỳ`. |
 | Import / Export | 8.3 (mục con "Nhập / xuất file") + FR của module liên quan | Bảng `Đối tượng \| Chiều (nhập/xuất) \| Định dạng \| Cột bắt buộc \| Kiểm tra \| Xử lý dòng lỗi \| Giới hạn số dòng \| FR`. |
-| Dữ liệu | 7.2–7.6, 13.5 | 7.3: **một `erDiagram` cho mỗi module** + **một ERD tổng** (chỉ thực thể + quan hệ). 7.4 Data Dictionary cột `Thực thể \| Trường \| Kiểu \| Bắt buộc \| Ràng buộc \| Ví dụ \| Mô tả` cho mọi thực thể trong registry. |
+| Dữ liệu | 7.2–7.6, 13.5 | 7.3: **một ERD tổng** (thực thể + quan hệ); thêm `erDiagram` riêng cho module nào có từ 5 thực thể trở lên. 7.4 Data Dictionary cột `Thực thể \| Trường \| Kiểu \| Bắt buộc \| Ràng buộc \| Ví dụ \| Mô tả` cho mọi thực thể trong registry. |
 | Audit | 6.15 + 7.13 | Bảng `Đối tượng \| Thao tác cần ghi \| Thông tin ghi (ai, lúc nào, giá trị cũ → mới, IP) \| Thời gian lưu \| Ai xem được`. |
 
 Yêu cầu kiểm thử được: không viết "nhanh", "dễ dùng", "nhiều" — luôn có con số hoặc điều kiện cụ thể; khách chưa nêu thì `[ĐỀ XUẤT]` kèm con số đề xuất.

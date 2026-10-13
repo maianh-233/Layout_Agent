@@ -16,13 +16,13 @@ BA sẽ đọc **nguyên văn** từng câu cho khách hàng nghe. Khách thư�
 
    | Loại | Nghiệp vụ | Giao diện |
    |---|---|---|
-   | `website` | 20–35 | 12–20 |
-   | `ecommerce` | 35–55 | 15–25 |
-   | `crm` | 50–80 | 18–30 |
-   | `erp` | 70–120 | 20–35 |
-   | `management-generic` | 45–80 | 18–30 |
+   | `website` | 15–25 | 18–28 |
+   | `ecommerce` | 25–40 | 22–32 |
+   | `crm` | 35–55 | 25–38 |
+   | `erp` | 45–70 | 28–42 |
+   | `management-generic` | 30–50 | 25–38 |
 
-   Hỏi đủ để nắm chắc nghiệp vụ; không thêm câu chỉ để đủ số.
+   **Giao diện là phần quan trọng nhất** (prototype phải đúng ý khách, đội frontend dựng tiếp từ đó) → hỏi giao diện kỹ. **Nghiệp vụ hỏi gọn, đủ ý**: ưu tiên những gì ảnh hưởng tới màn hình (ai dùng, thấy gì, làm gì, chứng từ & trạng thái, dữ liệu cần nhập / xem, quy tắc hiển thị); gộp chi tiết vận hành ít ảnh hưởng giao diện. Không thêm câu chỉ để đủ số.
 8. Xưng hô lịch sự, trung tính theo yêu cầu ban đầu (nếu yêu cầu nói "chủ cửa hàng" là nữ/nam thì dùng "chị"/"anh"; không rõ thì dùng "anh/chị").
 9. Không hỏi điều yêu cầu ban đầu hoặc SRS đã trả lời rõ.
 
@@ -65,13 +65,30 @@ Thứ tự nhóm bắt buộc:
 
 ## Nhóm gợi ý — câu hỏi giao diện
 
-1. Phong cách thương hiệu, cảm giác muốn khách nhận được (9.1)
-2. Màu sắc, logo, font chữ đã có (9.2, 9.3, 9.4)
-3. Website tham khảo khách thích / không thích (9.1)
-4. Các trang cần có, nội dung trang chủ (9.8, 9.9, 9.11)
-5. Thiết bị khách hàng hay dùng (9.16, 6.11)
-6. Người lớn tuổi / cần chữ to / hỗ trợ tiếp cận (9.17, 6.9)
+Câu hỏi giao diện phải đủ để dựng prototype **đúng ý khách mà không phải đoán**. Đọc `srs/_registry.json` / `_permissions.json` (nếu có) để hỏi đúng vai trò, chứng từ, màn hình chính của dự án này. Với câu chọn phong cách / bố cục, đưa phương án mô tả bằng hình ảnh đời thường (ví dụ "Gọn như Excel, thấy nhiều dòng một lúc" / "Thoáng như app ngân hàng, mỗi dòng cao, chữ to").
+
+**Website / thương mại điện tử:**
+1. Phong cách thương hiệu, cảm giác muốn khách nhận được; 2–3 website tham khảo khách thích / không thích và vì sao (9.1)
+2. Màu sắc, logo, font chữ đã có; màu không muốn dùng (9.2, 9.3, 9.4)
+3. Trang chủ: các phần theo thứ tự, nội dung phần đầu tiên, nút kêu gọi chính (9.8, 9.11)
+4. Hình ảnh: ảnh thật / minh họa / ít ảnh; phong cách ảnh (9.1)
+5. Trang sản phẩm / dịch vụ: thông tin nào nổi bật nhất, cách lọc / sắp xếp (9.11, 9.13)
+6. Thiết bị khách hay dùng; người lớn tuổi / cần chữ to (9.16, 9.17, 6.9)
 7. Thông báo, phản hồi khi thao tác (9.15, 9.18)
+
+**CRM / ERP / hệ thống quản lý** (bắt buộc đủ các chủ đề):
+1. **Mật độ hiển thị:** gọn để xem nhiều dữ liệu hay thoáng (9.2, 9.5)
+2. **Thiết bị chính của từng nhóm người dùng:** máy tính văn phòng, máy tính bảng ở kho, điện thoại đi thị trường; màn hình máy tính cỡ nào (9.16, 6.11)
+3. **Thương hiệu:** màu chủ đạo, logo, font; chế độ sáng / tối (9.3, 9.4)
+4. **Phần mềm khách đang dùng / từng dùng:** thích điểm gì, ghét điểm gì (MISA, KiotViet, Excel, Odoo, Salesforce…) (9.1)
+5. **Màn hình đầu tiên sau đăng nhập của từng vai trò** và những con số / việc cần thấy ngay ở đó (9.6, 9.11)
+6. **Các bảng dữ liệu quan trọng nhất** (một câu cho mỗi bảng chính, ví dụ danh sách đơn bán): cần những cột nào, lọc theo gì, sắp xếp mặc định (9.13)
+7. **Form nhập chứng từ chính:** nhập nhiều dòng hàng kiểu bảng tính hay từng dòng; trường nào hay nhập nhất; có dùng máy quét mã vạch (9.13)
+8. **Trang chi tiết chứng từ:** muốn thấy lịch sử thay đổi, luồng duyệt, file đính kèm ở đâu (9.11)
+9. **Duyệt / thao tác nhanh:** duyệt ngay trên danh sách hay phải mở chi tiết; có cần duyệt hàng loạt (9.14)
+10. **Dashboard / báo cáo:** biểu đồ hay bảng số; những chỉ số nào đặt trên cùng (9.11)
+11. **Thông báo:** chuông trong app, toast, email; việc nào cần nhắc (9.15)
+12. **Ngôn ngữ, định dạng số / ngày / tiền**, in ấn từ màn hình (9.18, 6.12)
 
 ## Định dạng JSON (bắt buộc, backend kiểm tra bằng zod)
 

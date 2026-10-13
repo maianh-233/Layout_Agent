@@ -2,7 +2,7 @@
 
 > Chỉ dùng để gợi ý câu hỏi cho đủ ý. Xem quy tắc ở [README.md](README.md).
 
-**Số câu hỏi nghiệp vụ:** 20–35. **Số câu hỏi giao diện:** 12–20.
+**Số câu hỏi nghiệp vụ:** 15–25 (gọn, đủ ý). **Số câu hỏi giao diện:** 18–28 (kỹ — phần quan trọng nhất).
 
 ## 1. Module điển hình
 

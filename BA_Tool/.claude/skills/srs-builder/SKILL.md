@@ -70,16 +70,21 @@ Tham số nhận được: $ARGUMENTS
 ### `ui-questions`
 1. Chỉ đọc: `srs/README.md`, `srs/01-introduction.md`, `srs/02-overall-description.md`, `srs/04-user-requirements.md`, `srs/05-functional/README.md`.
 2. Đọc [references/question-guide.md](references/question-guide.md).
-3. Ghi câu hỏi giao diện ra `PROJECT_DIR/questions-ui.json`, số câu theo dòng "Số câu hỏi giao diện" trong `references/domains/<PROJECT_TYPE>.md` (chỉ đọc dòng đầu file đó). Không hỏi lại điều SRS đã có.
+3. Ghi câu hỏi giao diện ra `PROJECT_DIR/questions-ui.json`, số câu theo dòng "Số câu hỏi giao diện" trong `references/domains/<PROJECT_TYPE>.md` (chỉ đọc 5 dòng đầu file đó). Không hỏi lại điều SRS đã có.
+4. Đây là **bộ câu hỏi quan trọng nhất** (prototype phải đúng ý khách). `SRS_MODE: registry`: đọc thêm `srs/_registry.json` và `srs/_permissions.json` để hỏi đúng từng vai trò (màn hình đầu tiên), từng bảng dữ liệu / form chứng từ chính (cột, trường), theo nhóm "CRM / ERP / hệ thống quản lý" trong question-guide.
 
 ### `ui-srs`
-1. Đọc `answers-ui.md`, `srs/README.md`, [references/srs-writing-guide.md](references/srs-writing-guide.md), mục Phần 9 trong [references/srs-structure.md](references/srs-structure.md), các mẫu trong `templates/09-ui-ux/`.
+1. Đọc `answers-ui.md` (kể cả câu hỏi bổ sung và ghi chú BA), `srs/README.md`, [references/srs-writing-guide.md](references/srs-writing-guide.md), mục Phần 9 trong [references/srs-structure.md](references/srs-structure.md), các mẫu trong `templates/09-ui-ux/`.
 2. Mở `05-functional/<module>.md` chỉ khi cần biết luồng của một màn hình.
 3. Tạo toàn bộ `srs/09-ui-ux/` (README ghi đè bản giữ chỗ, 01–04, `screens/<screen-slug>.md` theo mẫu `templates/09-ui-ux/screens/screen.md` cho từng màn hình).
 4. Cập nhật (sửa đúng mục, không viết lại cả file): 6.8, 6.9, 6.11 trong `06-non-functional.md`; 8.1 trong `08-external-interfaces.md`; truy vết màn hình ↔ yêu cầu trong `12-traceability.md`; 13.9 trong `13-appendices.md`; thêm dòng phiên bản mới ở 0.5 trong `00-document-control.md`.
 5. Cập nhật `srs/README.md`.
 6. **`SRS_MODE: registry`**, khác với trên:
    - Đọc `srs/_registry.json` và `srs/_permissions.json` **thay cho** việc mở các file module: lấy danh sách FR, vai trò, chứng từ từ đây. Chỉ mở file module khi cần chi tiết luồng.
+   - Đọc [references/design-guide.md](references/design-guide.md) — **Phần 9 là phần quan trọng nhất**, viết đủ chi tiết cho frontend dựng tiếp.
+   - Ghi `srs/_design-tokens.json` (design tokens, đúng định dạng design-guide mục 1) cùng giá trị với 9.2–9.5.
+   - 9.12 (`04-states-responsive.md`): thư viện component theo design-guide mục 2; màn hình chỉ dùng component trong thư viện.
+   - Mỗi `screens/<slug>.md` đủ 9 mục của design-guide mục 3 (bảng: cột ↔ trường dữ liệu; form: trường, validation, thông báo lỗi nguyên văn; hành động ↔ quyền ↔ chuyển trạng thái; trạng thái; responsive; dữ liệu giả).
    - Mã màn hình dạng `SCR-<MODULE>-<3 số>`. Thêm mọi màn hình vào `screens` của registry (kèm `functional`, `roles`, `file`); 03-screen-inventory dùng đúng các mã này.
    - Điền `defaultScreen` trong `_permissions.json` cho **mọi vai trò** (theo câu trả lời "màn hình đầu tiên sau đăng nhập"; chưa rõ thì chọn hợp lý, đặt `"proposed": true` và ghi 13.9).
    - **Không sửa `12-traceability.md`** (code sinh lại, có thêm cột màn hình).
