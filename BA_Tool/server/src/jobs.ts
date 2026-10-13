@@ -25,6 +25,7 @@ import { checkRegistry, writeGenerated } from './registry.js';
 import { checkDesignTokens } from './design.js';
 import { REVIEW_AI, buildReview, codeReview, readAiReview, readReview, reviewSummary, writeReview } from './review.js';
 import { diffDirs, listAll } from './versions.js';
+import { listPages, scanHardcoded, writeFoundation } from './prototype-assets.js';
 
 export type JobEvent =
   | AgentEvent
@@ -348,10 +349,29 @@ ${JSON.stringify(finding, null, 2)}`, draft);
 
     case 'prototype': {
       const target = params.targetDir!;
+      if (srsMode === 'registry') {
+        // Nền móng do code sinh từ SRS: tokens (Tailwind + CSS) và sprite icon — AI dựng phần còn lại trên đó
+        const written = await writeFoundation(target, srsDir(job.slug));
+        emit(job, { type: 'step', text: `Đã sinh từ design tokens: ${written.join(', ')}.` });
+      }
       emit(job, { type: 'step', text: `Đang dựng prototype vào ${target}…` });
       await run();
-      const pages = (await fs.readdir(target)).filter((f) => f.toLowerCase().endsWith('.html')).sort();
+      const pages = await listPages(target);
       if (!pages.includes('index.html')) throw new Error('AI chưa tạo index.html trong folder prototype. Hãy thử chạy lại.');
+      if (srsMode === 'registry') {
+        if (!pages.includes('components.html')) emit(job, { type: 'step', text: 'Cảnh báo: chưa có trang style guide components.html.' });
+        const hard = await scanHardcoded(target, pages);
+        if (hard.length) {
+          const total = hard.reduce((s, h) => s + h.count, 0);
+          emit(job, {
+            type: 'step',
+            text: `Cảnh báo: ${total} chỗ dùng giá trị viết cứng (mã màu HEX / class kiểu text-[13px]) thay vì token — ${hard
+              .slice(0, 5)
+              .map((h) => `${h.file} (${h.count})`)
+              .join(', ')}${hard.length > 5 ? '…' : ''}.`,
+          });
+        }
+      }
       await updateProject(job.slug, (pr) => {
         pr.prototype = { dir: target, builtAt: new Date().toISOString(), pages };
         pr.screen = 'done';

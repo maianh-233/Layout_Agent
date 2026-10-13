@@ -100,7 +100,9 @@ Tham số nhận được: $ARGUMENTS
 2. `PROJECT_DIR` là bản nháp; chỉ sửa trong `PROJECT_DIR/srs/`.
 
 ### `prototype`
-1. **Bắt buộc gọi skill `design-taste-frontend`** (taste skill) trước khi viết bất kỳ HTML nào, và tuân theo nó trong suốt quá trình dựng giao diện.
-2. Đọc [references/prototype-guide.md](references/prototype-guide.md).
-3. Đọc `srs/README.md` và toàn bộ `srs/09-ui-ux/`. Mở `05-functional/<module>.md` chỉ khi cần biết luồng xử lý của màn hình.
-4. Dựng prototype vào `TARGET_DIR`. Thứ tự: `assets/js/mock-data.js` → `assets/js/layout.js` → `assets/js/app.js` → từng trang HTML → `README.md`.
+1. **Bắt buộc gọi skill `design-taste-frontend`** (taste skill) trước khi viết bất kỳ HTML nào, và tuân theo nó trong suốt quá trình dựng giao diện. Khi taste skill và SRS khác nhau, **SRS thắng**.
+2. **`SRS_MODE: registry`:** làm theo [references/prototype-guide.md](references/prototype-guide.md).
+   - `assets/js/tailwind.tokens.js`, `assets/css/tokens.css`, `assets/js/icons.js` **đã có sẵn** trong `TARGET_DIR` (tool sinh từ SRS) — dùng, không sửa, không viết lại.
+   - Thứ tự: `components.js` → `components.html` → `layout.js` → mock data + `app.js` → `index.html` → từng màn hình → `README.md`.
+   - Màn hình chỉ ghép từ component; không hardcode màu / cỡ chữ / khoảng cách.
+3. **`SRS_MODE: legacy`:** làm theo [references/prototype-guide-legacy.md](references/prototype-guide-legacy.md): đọc `srs/README.md` và toàn bộ `srs/09-ui-ux/` (mở `05-functional/<module>.md` chỉ khi cần luồng); thứ tự `assets/js/mock-data.js` → `assets/js/layout.js` → `assets/js/app.js` → từng trang HTML → `README.md`.
