@@ -48,6 +48,8 @@ export type JobKind =
   | 'ui-questions'
   | 'ui-followup'
   | 'ui-srs'
+  | 'srs-review'
+  | 'srs-fix'
   | 'prototype';
 
 export interface PhaseState {
@@ -71,6 +73,9 @@ export interface Project {
   srsChanges: { path: string; kind: 'new' | 'modified' }[];
   /** Lỗi còn lại của _registry.json / _permissions.json (dự án mới) */
   registryErrors?: string[];
+  review?: { createdAt: string; critical: number; major: number; minor: number; aiStatus: 'done' | 'failed' | 'skipped' };
+  pendingFix?: { findingId: string; createdAt: string } | null;
+  versions?: VersionInfo[];
   prototype: { dir: string | null; builtAt: string | null; pages: string[] };
   job: {
     id: string;
@@ -80,7 +85,44 @@ export interface Project {
     errorCode?: 'usage_limit' | 'auth' | 'network' | 'other';
     resetsAt?: number;
     targetDir?: string;
+    findingId?: string;
   } | null;
+}
+
+export type Severity = 'critical' | 'major' | 'minor';
+export const SEVERITY_LABELS: Record<Severity, string> = { critical: 'Nghiêm trọng', major: 'Cần sửa', minor: 'Gợi ý' };
+
+export interface Finding {
+  id: string;
+  severity: Severity;
+  source: 'code' | 'ai';
+  category: string;
+  message: string;
+  file?: string;
+  section?: string;
+  codes?: string[];
+  suggestion?: string;
+  status: 'open' | 'fixed';
+}
+
+export interface Review {
+  createdAt: string;
+  ai: { status: 'done' | 'failed' | 'skipped'; error?: string };
+  findings: Finding[];
+}
+
+export interface FileDiff {
+  path: string;
+  status: 'added' | 'removed' | 'modified';
+  patch: string;
+  added: number;
+  removed: number;
+}
+
+export interface VersionInfo {
+  id: string;
+  createdAt: string;
+  note: string;
 }
 
 /** Trạng thái Claude Code trên máy (server/src/auth.ts) */

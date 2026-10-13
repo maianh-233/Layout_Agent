@@ -1,5 +1,6 @@
 // Quản lý tác vụ AI chạy nền + phát tiến độ qua SSE.
 import fs from 'node:fs/promises';
+import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import type { Response } from 'express';
@@ -8,6 +9,7 @@ import {
   HttpError,
   appendFollowup,
   diffSrs,
+  fixDir,
   loadProject,
   normalizeQuestions,
   projectDir,
@@ -21,6 +23,8 @@ import {
 import { FollowupSetSchema, QuestionSetSchema, projectTypeOf, usesRegistry, type JobKind, type Phase, type Project } from './schemas.js';
 import { checkRegistry, writeGenerated } from './registry.js';
 import { checkDesignTokens } from './design.js';
+import { REVIEW_AI, buildReview, codeReview, readAiReview, readReview, reviewSummary, writeReview } from './review.js';
+import { diffDirs, listAll } from './versions.js';
 
 export type JobEvent =
   | AgentEvent
@@ -77,14 +81,20 @@ export function reconcileJob(p: Project): Project {
   return p;
 }
 
-export async function startJob(slug: string, kind: JobKind, params: { targetDir?: string } = {}): Promise<string> {
+/** Tham số tác vụ — lưu lại để "Chạy lại bước này" chạy đúng như cũ. */
+export interface JobParams {
+  targetDir?: string;
+  findingId?: string;
+}
+
+export async function startJob(slug: string, kind: JobKind, params: JobParams = {}): Promise<string> {
   const p = await loadProject(slug);
   if (p.job?.status === 'running' && jobs.has(p.job.id)) throw new HttpError(409, 'Dự án đang có tác vụ AI chạy.');
 
   const job: Job = { id: randomUUID(), slug, kind, status: 'running', events: [], clients: new Set(), abort: new AbortController() };
   jobs.set(job.id, job);
   await updateProject(slug, (pr) => {
-    pr.job = { id: job.id, kind, status: 'running', targetDir: params.targetDir };
+    pr.job = { id: job.id, kind, status: 'running', targetDir: params.targetDir, findingId: params.findingId };
   });
 
   // Chạy nền, không chờ
@@ -92,7 +102,7 @@ export async function startJob(slug: string, kind: JobKind, params: { targetDir?
     async () => {
       job.status = 'done';
       await updateProject(slug, (pr) => {
-        pr.job = { id: job.id, kind, status: 'done', targetDir: params.targetDir };
+        pr.job = { id: job.id, kind, status: 'done', targetDir: params.targetDir, findingId: params.findingId };
       });
       emit(job, { type: 'status', status: 'done' });
       closeClients(job);
@@ -104,7 +114,7 @@ export async function startJob(slug: string, kind: JobKind, params: { targetDir?
       job.status = 'error';
       // Chỉ ghi trạng thái tác vụ — câu trả lời, màn hình hiện tại và các file đã có được giữ nguyên
       await updateProject(slug, (pr) => {
-        pr.job = { id: job.id, kind, status: 'error', error: message, errorCode, resetsAt, targetDir: params.targetDir };
+        pr.job = { id: job.id, kind, status: 'error', error: message, errorCode, resetsAt, targetDir: params.targetDir, findingId: params.findingId };
       }).catch(() => {});
       emit(job, { type: 'status', status: 'error', error: message, errorCode });
       closeClients(job);
@@ -120,7 +130,7 @@ export async function retryLastJob(slug: string): Promise<string> {
   // Vòng bổ sung đã xong (không có câu nào) nhưng lỗi lúc viết SRS → chỉ chạy lại phần viết SRS
   if (p.job.kind === 'business-followup' && p.business.followupStatus) return startJob(slug, 'business-srs');
   if (p.job.kind === 'ui-followup' && p.ui.followupStatus) return startJob(slug, 'ui-srs');
-  return startJob(slug, p.job.kind, { targetDir: p.job.targetDir });
+  return startJob(slug, p.job.kind, { targetDir: p.job.targetDir, findingId: p.job.findingId });
 }
 
 function closeClients(job: Job) {
@@ -130,7 +140,7 @@ function closeClients(job: Job) {
   setTimeout(() => jobs.delete(job.id), 30 * 60 * 1000).unref();
 }
 
-async function runJob(job: Job, params: { targetDir?: string }) {
+async function runJob(job: Job, params: JobParams) {
   const dir = projectDir(job.slug);
   const loaded = await loadProject(job.slug);
   const projectType = projectTypeOf(loaded);
@@ -142,8 +152,8 @@ async function runJob(job: Job, params: { targetDir?: string }) {
     return path.relative(base, f).split(path.sep).join('/');
   };
   const onEvent = (e: AgentEvent) => emit(job, e.type === 'file' ? { ...e, path: relFile(e.path) } : e);
-  const runAs = (mode: JobKind, extra?: string) =>
-    runSkill({ mode, projectType, srsMode, projectDir: dir, targetDir: params.targetDir, extra, onEvent, signal: job.abort.signal });
+  const runAs = (mode: JobKind, extra?: string, projectDirOverride?: string) =>
+    runSkill({ mode, projectType, srsMode, projectDir: projectDirOverride ?? dir, targetDir: params.targetDir, extra, onEvent, signal: job.abort.signal });
   const run = (extra?: string) => runAs(job.kind, extra);
 
   /** Viết SRS nghiệp vụ / bổ sung SRS giao diện (dùng cho tác vụ *-srs và khi vòng bổ sung không có câu nào). */
@@ -157,6 +167,7 @@ async function runJob(job: Job, params: { targetDir?: string }) {
     await runAs(mode);
     const registryErrors = srsMode === 'registry' ? await finishRegistry(phase, mode) : undefined;
     const changes = await diffSrs(job.slug, before);
+    if (srsMode === 'registry') await runReview({ failSoft: true });
     if (!changes.some((c) => c.path === 'README.md') && !before.has('README.md')) {
       throw new Error('AI chưa tạo được mục lục srs/README.md. Hãy thử chạy lại.');
     }
@@ -209,7 +220,63 @@ async function runJob(job: Job, params: { targetDir?: string }) {
     return errors;
   };
 
+  /**
+   * Rà soát SRS: kiểm bằng code, ghi tạm kết quả (để AI không báo trùng), rồi lượt AI chỉ đọc → gộp.
+   * failSoft: lượt AI lỗi (ví dụ hết quota) thì vẫn giữ kết quả kiểm bằng code, không làm hỏng tác vụ.
+   */
+  const runReview = async ({ failSoft }: { failSoft: boolean }) => {
+    const srs = srsDir(job.slug);
+    const phase = existsSync(path.join(srs, '09-ui-ux', '03-screen-inventory.md')) ? 'ui' : 'business';
+    emit(job, { type: 'step', text: 'Rà soát SRS: đang kiểm tra bằng code (mã, truy vết, phân quyền, trạng thái, Mermaid)…' });
+    const code = await codeReview(srs, phase);
+    await writeReview(srs, buildReview(code, [], { status: 'skipped' }));
+    emit(job, { type: 'step', text: `Kiểm bằng code: ${code.length} vấn đề. AI đang rà mâu thuẫn, thiếu nhánh, yêu cầu mơ hồ…` });
+    await fs.rm(path.join(srs, REVIEW_AI), { force: true });
+    let ai: Awaited<ReturnType<typeof readAiReview>>;
+    try {
+      await runAs('srs-review');
+      ai = await readAiReview(srs);
+    } catch (e) {
+      if (!failSoft) throw e;
+      ai = { ok: false, error: e instanceof Error ? e.message : String(e) };
+    }
+    const review = buildReview(code, ai.ok ? ai.findings : [], ai.ok ? { status: 'done' } : { status: 'failed', error: ai.error });
+    await writeReview(srs, review);
+    await updateProject(job.slug, (pr) => void (pr.review = reviewSummary(review)));
+    const sum = reviewSummary(review);
+    emit(job, { type: 'step', text: `Rà soát xong: ${sum.critical} nghiêm trọng, ${sum.major} cần sửa, ${sum.minor} gợi ý${ai.ok ? '' : ' (lượt AI chưa chạy được)'}.` });
+  };
+
   switch (job.kind) {
+    case 'srs-review':
+      await runReview({ failSoft: false });
+      return;
+
+    case 'srs-fix': {
+      // AI sửa trên bản nháp (_fix/), BA xem thay đổi rồi mới áp dụng
+      const srs = srsDir(job.slug);
+      const review = await readReview(srs);
+      const finding = review?.findings.find((f) => f.id === params.findingId);
+      if (!finding) throw new Error('Không tìm thấy lỗi rà soát cần sửa. Hãy bấm "Rà soát lại".');
+      const draft = fixDir(job.slug);
+      await fs.rm(draft, { recursive: true, force: true });
+      for (const rel of await listAll(srs)) {
+        const to = path.join(draft, 'srs', rel);
+        await fs.mkdir(path.dirname(to), { recursive: true });
+        await fs.copyFile(path.join(srs, rel), to);
+      }
+      for (const f of ['request.md', 'answers-business.md', 'answers-ui.md'])
+        if (existsSync(path.join(dir, f))) await fs.copyFile(path.join(dir, f), path.join(draft, f));
+      emit(job, { type: 'step', text: `AI đang sửa ${finding.id} trên bản nháp: ${finding.message}` });
+      await runAs('srs-fix', `LỖI CẦN SỬA (${finding.id}):
+${JSON.stringify(finding, null, 2)}`, draft);
+      const diffs = await diffDirs(srs, path.join(draft, 'srs'), 'hien-tai', 'de-xuat');
+      if (diffs.length === 0) throw new Error('AI không thay đổi file nào cho lỗi này. Có thể lỗi cần BA quyết định — hãy sửa tay hoặc hỏi lại khách.');
+      await updateProject(job.slug, (pr) => void (pr.pendingFix = { findingId: finding.id, createdAt: new Date().toISOString() }));
+      emit(job, { type: 'step', text: `AI đề xuất thay đổi ${diffs.length} file. Hãy xem lại trước khi lưu.` });
+      return;
+    }
+
     case 'business-questions':
     case 'ui-questions': {
       const phase: Phase = job.kind === 'business-questions' ? 'business' : 'ui';

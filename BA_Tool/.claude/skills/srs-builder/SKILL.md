@@ -8,7 +8,7 @@ description: Hỗ trợ BA thu thập yêu cầu khách hàng và tạo tài li�
 Skill được backend gọi bằng `/srs-builder` kèm các tham số dạng `KHÓA: giá trị`:
 
 ```
-MODE: <business-questions | business-followup | business-srs | ui-questions | ui-followup | ui-srs | prototype>
+MODE: <business-questions | business-followup | business-srs | ui-questions | ui-followup | ui-srs | srs-review | srs-fix | prototype>
 PROJECT_TYPE: <website | ecommerce | crm | erp | management-generic>
 SRS_MODE: <registry | legacy>
 PROJECT_DIR: <đường dẫn tuyệt đối tới workspace/<slug>>
@@ -65,6 +65,7 @@ Tham số nhận được: $ARGUMENTS
    - Đọc thêm [references/registry-guide.md](references/registry-guide.md) và mục 6–7 của srs-writing-guide.
    - Ghi `srs/_registry.json` + `srs/_permissions.json` (cập nhật dần trong lúc viết; `screens: []`, `defaultScreen: {}`), và `05-functional/_integration.md`.
    - **Bỏ qua `12-traceability.md`** (code sinh). Ở 4.2 để dòng `<!-- AUTO:RBAC --><!-- /AUTO:RBAC -->` thay cho bảng ma trận.
+   - `00-document-control.md`: 0.3 ghi `Nháp — chưa chốt phiên bản`; 0.5 chỉ để bảng `| Phiên bản | Ngày | Người soạn | Nội dung |` trống — tool thêm dòng khi BA bấm "Chốt phiên bản".
    - Thứ tự: `00` → `01` → `02` → `03` → `04` → `05-functional/` (README, từng module, `_integration.md`) → `06` → `07` → `08` → `09-ui-ux/README.md` → `10` → `11` → `13` → `_permissions.json` → kiểm lại `_registry.json` đủ mọi mã đã dùng → `README.md`.
 
 ### `ui-questions`
@@ -87,7 +88,16 @@ Tham số nhận được: $ARGUMENTS
    - Mỗi `screens/<slug>.md` đủ 9 mục của design-guide mục 3 (bảng: cột ↔ trường dữ liệu; form: trường, validation, thông báo lỗi nguyên văn; hành động ↔ quyền ↔ chuyển trạng thái; trạng thái; responsive; dữ liệu giả).
    - Mã màn hình dạng `SCR-<MODULE>-<3 số>`. Thêm mọi màn hình vào `screens` của registry (kèm `functional`, `roles`, `file`); 03-screen-inventory dùng đúng các mã này.
    - Điền `defaultScreen` trong `_permissions.json` cho **mọi vai trò** (theo câu trả lời "màn hình đầu tiên sau đăng nhập"; chưa rõ thì chọn hợp lý, đặt `"proposed": true` và ghi 13.9).
-   - **Không sửa `12-traceability.md`** (code sinh lại, có thêm cột màn hình).
+   - **Không sửa `12-traceability.md`** (code sinh lại, có thêm cột màn hình). Không thêm dòng 0.5 (tool ghi khi chốt phiên bản).
+
+### `srs-review` — rà soát chất lượng (chỉ đọc)
+1. Đọc [references/review-guide.md](references/review-guide.md) mục 1 và `srs/_review.json` (kết quả kiểm bằng code — không báo trùng).
+2. Đọc registry / phân quyền trước, chỉ mở file SRS cần đối chiếu. Có Phần 9 thì kiểm thêm theo [references/design-guide.md](references/design-guide.md).
+3. Ghi **chỉ** `srs/_review-ai.json`. Không sửa file SRS nào.
+
+### `srs-fix` — sửa một lỗi rà soát trên bản nháp
+1. Làm theo [references/review-guide.md](references/review-guide.md) mục 2. Lỗi cần sửa nằm trong phần `LỖI CẦN SỬA` của prompt.
+2. `PROJECT_DIR` là bản nháp; chỉ sửa trong `PROJECT_DIR/srs/`.
 
 ### `prototype`
 1. **Bắt buộc gọi skill `design-taste-frontend`** (taste skill) trước khi viết bất kỳ HTML nào, và tuân theo nó trong suốt quá trình dựng giao diện.

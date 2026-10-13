@@ -68,7 +68,7 @@ Chỉ áp dụng khi `SRS_MODE: registry`. Backend kiểm tra hai file này bằ
       "states": [
         { "id": "DRAFT", "name": "Nháp", "tone": "neutral", "initial": true },
         { "id": "PENDING_APPROVAL", "name": "Chờ duyệt", "tone": "warning" },
-        { "id": "APPROVED", "name": "Đã duyệt", "tone": "success" },
+        { "id": "APPROVED", "name": "Đã duyệt", "tone": "success", "final": true },
         { "id": "REJECTED", "name": "Bị từ chối", "tone": "danger" },
         { "id": "CANCELLED", "name": "Đã hủy", "tone": "neutral", "final": true }
       ],

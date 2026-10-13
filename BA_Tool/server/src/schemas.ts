@@ -157,6 +157,8 @@ export const JOB_KINDS = [
   'ui-questions',
   'ui-followup',
   'ui-srs',
+  'srs-review',
+  'srs-fix',
   'prototype',
 ] as const;
 export type JobKind = (typeof JOB_KINDS)[number];
@@ -186,6 +188,12 @@ export interface Project {
   srsChanges: { path: string; kind: 'new' | 'modified' }[];
   /** Lỗi còn lại của srs/_registry.json / _permissions.json sau lần tạo SRS gần nhất (dự án mới) */
   registryErrors?: string[];
+  /** Tóm tắt lần rà soát SRS gần nhất (chi tiết ở srs/_review.json) */
+  review?: { createdAt: string; critical: number; major: number; minor: number; aiStatus: 'done' | 'failed' | 'skipped' };
+  /** AI đã sửa một lỗi rà soát trên bản nháp (workspace/<slug>/_fix/srs), chờ BA xem thay đổi */
+  pendingFix?: { findingId: string; createdAt: string } | null;
+  /** Các phiên bản đã chốt (bản chụp ở srs/_versions/<id>/) */
+  versions?: { id: string; createdAt: string; note: string }[];
   prototype: { dir: string | null; builtAt: string | null; pages: string[] };
   /** Tác vụ AI đang chạy hoặc vừa kết thúc */
   job: {
@@ -199,6 +207,8 @@ export interface Project {
     resetsAt?: number;
     /** Folder đích (bước prototype) — để "Chạy lại bước này" */
     targetDir?: string;
+    /** Lỗi rà soát cần sửa (tác vụ srs-fix) */
+    findingId?: string;
   } | null;
 }
 

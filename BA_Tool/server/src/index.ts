@@ -10,6 +10,7 @@ import { checkAuth } from './auth.js';
 import {
   HttpError,
   createProject,
+  fixDir,
   listProjects,
   listSrsFiles,
   loadProject,
@@ -20,6 +21,10 @@ import {
 } from './projects.js';
 import { attachClient, getJob, reconcileJob, retryLastJob, startJob } from './jobs.js';
 import { checkWritable, listDir, makeDir } from './fsbrowse.js';
+import { checkRegistry, writeGenerated } from './registry.js';
+import { checkDesignTokens } from './design.js';
+import { buildReview, codeReview, readReview, reviewSummary, writeReview } from './review.js';
+import { diffDirs, isClientFile, listAll, listVersions, lockVersion, versionRoot } from './versions.js';
 import { JOB_KINDS, PROJECT_TYPES, SaveAnswersSchema, type Screen } from './schemas.js';
 
 const app = express();
@@ -101,6 +106,7 @@ app.post('/api/projects/:slug/jobs', h(async (req, res) => {
     .object({
       kind: z.enum(JOB_KINDS),
       targetDir: z.string().optional(),
+      findingId: z.string().optional(),
     })
     .parse(req.body);
   const slug = param(req, 'slug');
@@ -115,7 +121,11 @@ app.post('/api/projects/:slug/jobs', h(async (req, res) => {
       throw new HttpError(400, 'Chưa có SRS giao diện (09-ui-ux). Hãy hoàn tất bước Giao diện trước.');
     }
   }
-  res.json({ jobId: await startJob(slug, body.kind, { targetDir }) });
+  if (body.kind === 'srs-fix') {
+    if (!body.findingId) throw new HttpError(400, 'Thiếu mã lỗi cần sửa');
+    if ((await loadProject(slug)).pendingFix) throw new HttpError(409, 'Đang có một bản sửa chờ xem. Hãy lưu hoặc bỏ bản sửa đó trước.');
+  }
+  res.json({ jobId: await startJob(slug, body.kind, { targetDir, findingId: body.findingId }) });
 }));
 
 /** "Chạy lại bước này" — chạy lại tác vụ lỗi gần nhất (ví dụ sau khi chạm giới hạn sử dụng). */
@@ -187,7 +197,119 @@ app.get('/api/projects/:slug/srs.zip', h(async (req, res) => {
   const zip = new ZipArchive({ zlib: { level: 9 } });
   zip.on('error', (e: Error) => res.destroy(e));
   zip.pipe(res);
-  zip.directory(dir, 'srs');
+  zip.glob('**/*', { cwd: dir, ignore: ['_versions/**'] }, { prefix: 'srs' });
+  await zip.finalize();
+}));
+
+// ---------- Rà soát SRS ----------
+
+app.get('/api/projects/:slug/review', h(async (req, res) => {
+  res.json(await readReview(srsDir(param(req, 'slug'))));
+}));
+
+/** Bản sửa AI đề xuất (chờ BA xem): lỗi được sửa + diff từng file. */
+app.get('/api/projects/:slug/fix', h(async (req, res) => {
+  const slug = param(req, 'slug');
+  const p = await loadProject(slug);
+  if (!p.pendingFix) throw new HttpError(404, 'Không có bản sửa nào đang chờ');
+  const review = await readReview(srsDir(slug));
+  const finding = review?.findings.find((f) => f.id === p.pendingFix!.findingId) ?? null;
+  res.json({ finding, diffs: await diffDirs(srsDir(slug), path.join(fixDir(slug), 'srs'), 'hien-tai', 'de-xuat') });
+}));
+
+/** Lưu bản sửa: chép file đã đổi vào srs/, sinh lại Phần 12 + 4.2, kiểm lại bằng code. */
+app.post('/api/projects/:slug/fix/apply', h(async (req, res) => {
+  const slug = param(req, 'slug');
+  const p = await loadProject(slug);
+  if (!p.pendingFix) throw new HttpError(404, 'Không có bản sửa nào đang chờ');
+  const srs = srsDir(slug);
+  const draft = path.join(fixDir(slug), 'srs');
+  const diffs = await diffDirs(srs, draft, 'hien-tai', 'de-xuat');
+  for (const d of diffs) {
+    if (d.status === 'removed') continue; // AI không xóa file; file chỉ có ở bản hiện tại thì giữ
+    await fs.mkdir(path.dirname(path.join(srs, d.path)), { recursive: true });
+    await fs.copyFile(path.join(draft, d.path), path.join(srs, d.path));
+  }
+  const phase = existsSync(path.join(srs, '09-ui-ux', '03-screen-inventory.md')) ? 'ui' : 'business';
+  const check = await checkRegistry(srs, phase);
+  await writeGenerated(srs, check, { uiDone: phase === 'ui' });
+  const tokenErrors = phase === 'ui' ? await checkDesignTokens(srs) : [];
+  // Gộp: kiểm bằng code chạy lại; kết quả AI cũ giữ nguyên, lỗi vừa sửa (nếu do AI phát hiện) đánh dấu đã sửa
+  const old = await readReview(srs);
+  const ai = (old?.findings ?? [])
+    .filter((f) => f.source === 'ai')
+    .map(({ id, source: _s, ...f }) => (id === p.pendingFix!.findingId ? { ...f, status: 'fixed' as const } : f));
+  const review = buildReview(await codeReview(srs, phase), ai, old?.ai ?? { status: 'skipped' });
+  await writeReview(srs, review);
+  await fs.rm(fixDir(slug), { recursive: true, force: true });
+  res.json(
+    await updateProject(slug, (pr) => {
+      pr.pendingFix = null;
+      pr.review = reviewSummary(review);
+      pr.registryErrors = [...check.errors, ...tokenErrors];
+      pr.srsChanges = diffs.filter((d) => d.status !== 'removed').map((d) => ({ path: d.path, kind: d.status === 'added' ? 'new' : 'modified' }));
+    }),
+  );
+}));
+
+app.post('/api/projects/:slug/fix/discard', h(async (req, res) => {
+  const slug = param(req, 'slug');
+  await fs.rm(fixDir(slug), { recursive: true, force: true });
+  res.json(await updateProject(slug, (pr) => void (pr.pendingFix = null)));
+}));
+
+// ---------- Phiên bản ----------
+
+app.get('/api/projects/:slug/versions', h(async (req, res) => {
+  const slug = param(req, 'slug');
+  const p = await loadProject(slug);
+  const meta = new Map((p.versions ?? []).map((v) => [v.id, v]));
+  res.json((await listVersions(srsDir(slug))).map((id) => meta.get(id) ?? { id, createdAt: '', note: '' }));
+}));
+
+/** Chốt phiên bản: ghi 0.3 / 0.5 rồi chụp srs/ vào srs/_versions/vX.Y/. */
+app.post('/api/projects/:slug/versions', h(async (req, res) => {
+  const slug = param(req, 'slug');
+  const { note } = z.object({ note: z.string().trim().max(500).default('') }).parse(req.body);
+  const p = reconcileJob(await loadProject(slug));
+  if (p.job?.status === 'running') throw new HttpError(409, 'AI đang chạy, hãy chờ xong rồi chốt phiên bản.');
+  if (!existsSync(srsDir(slug))) throw new HttpError(400, 'Chưa có SRS');
+  const id = await lockVersion(srsDir(slug), note);
+  res.json(
+    await updateProject(slug, (pr) => {
+      pr.versions = [...(pr.versions ?? []), { id, createdAt: new Date().toISOString(), note }];
+    }),
+  );
+}));
+
+app.get('/api/projects/:slug/versions/compare', h(async (req, res) => {
+  const srs = srsDir(param(req, 'slug'));
+  const { a, b } = z.object({ a: z.string(), b: z.string() }).parse(req.query);
+  try {
+    res.json(await diffDirs(versionRoot(srs, a), versionRoot(srs, b), a, b));
+  } catch (e) {
+    throw new HttpError(400, (e as Error).message);
+  }
+}));
+
+/** Gói gửi khách: chỉ các file .md nội dung SRS (không có file rà soát, registry, ghi chú BA). */
+app.get('/api/projects/:slug/export.zip', h(async (req, res) => {
+  const slug = param(req, 'slug');
+  const version = String(req.query.version || 'current');
+  let root: string;
+  try {
+    root = versionRoot(srsDir(slug), version);
+  } catch (e) {
+    throw new HttpError(400, (e as Error).message);
+  }
+  const files = (await listAll(root)).filter(isClientFile);
+  if (!files.length) throw new HttpError(404, 'Chưa có file SRS để xuất');
+  res.setHeader('Content-Type', 'application/zip');
+  res.setHeader('Content-Disposition', `attachment; filename="${slug}-srs-${version === 'current' ? 'hien-tai' : version}.zip"`);
+  const zip = new ZipArchive({ zlib: { level: 9 } });
+  zip.on('error', (e: Error) => res.destroy(e));
+  zip.pipe(res);
+  for (const f of files) zip.file(path.join(root, f), { name: `srs/${f}` });
   await zip.finalize();
 }));
 

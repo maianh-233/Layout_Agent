@@ -1,5 +1,19 @@
 // Gọi API backend. Mọi lỗi được chuyển thành Error có thông báo tiếng Việt.
-import type { Answer, AuthStatus, DirListing, JobKind, Phase, Project, ProjectType, Screen, SrsFileInfo } from './types';
+import type {
+  Answer,
+  AuthStatus,
+  DirListing,
+  FileDiff,
+  Finding,
+  JobKind,
+  Phase,
+  Project,
+  ProjectType,
+  Review,
+  Screen,
+  SrsFileInfo,
+  VersionInfo,
+} from './types';
 
 async function call<T>(url: string, init?: RequestInit): Promise<T> {
   let res: Response;
@@ -29,8 +43,16 @@ export const api = {
   setScreen: (slug: string, screen: Screen) => call<Project>(`/api/projects/${slug}/screen`, json('POST', { screen })),
   submitRequest: (slug: string, request: string) =>
     call<{ jobId: string }>(`/api/projects/${slug}/request`, json('POST', { request })),
-  startJob: (slug: string, kind: JobKind, targetDir?: string) =>
-    call<{ jobId: string }>(`/api/projects/${slug}/jobs`, json('POST', { kind, targetDir })),
+  startJob: (slug: string, kind: JobKind, opts: { targetDir?: string; findingId?: string } = {}) =>
+    call<{ jobId: string }>(`/api/projects/${slug}/jobs`, json('POST', { kind, ...opts })),
+  getReview: (slug: string) => call<Review | null>(`/api/projects/${slug}/review`),
+  getFix: (slug: string) => call<{ finding: Finding | null; diffs: FileDiff[] }>(`/api/projects/${slug}/fix`),
+  applyFix: (slug: string) => call<Project>(`/api/projects/${slug}/fix/apply`, { method: 'POST' }),
+  discardFix: (slug: string) => call<Project>(`/api/projects/${slug}/fix/discard`, { method: 'POST' }),
+  listVersions: (slug: string) => call<VersionInfo[]>(`/api/projects/${slug}/versions`),
+  lockVersion: (slug: string, note: string) => call<Project>(`/api/projects/${slug}/versions`, json('POST', { note })),
+  compareVersions: (slug: string, a: string, b: string) =>
+    call<FileDiff[]>(`/api/projects/${slug}/versions/compare?a=${encodeURIComponent(a)}&b=${encodeURIComponent(b)}`),
   saveAnswers: (
     slug: string,
     phase: Phase,

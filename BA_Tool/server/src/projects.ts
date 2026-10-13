@@ -42,6 +42,9 @@ export function projectDir(slug: string): string {
 
 export const srsDir = (slug: string) => path.join(projectDir(slug), 'srs');
 
+/** Bản nháp khi AI sửa một lỗi rà soát: _fix/srs (+ request / answers để AI tra cứu) */
+export const fixDir = (slug: string) => path.join(projectDir(slug), '_fix');
+
 const projectFile = (slug: string) => path.join(projectDir(slug), 'project.json');
 
 export async function listProjects(): Promise<Project[]> {
@@ -235,7 +238,10 @@ export async function listSrsFiles(slug: string): Promise<SrsFileInfo[]> {
   const walk = async (dir: string) => {
     for (const e of await fs.readdir(dir, { withFileTypes: true })) {
       const full = path.join(dir, e.name);
-      if (e.isDirectory()) await walk(full);
+      // Bỏ bản chụp phiên bản và file rà soát (xem ở tab Rà soát / Phiên bản)
+      if (e.isDirectory()) {
+        if (!(dir === root && e.name === '_versions')) await walk(full);
+      } else if (dir === root && e.name === '_review.md') continue;
       else if (e.name.toLowerCase().endsWith('.md')) {
         const text = await fs.readFile(full, 'utf8');
         out.push({

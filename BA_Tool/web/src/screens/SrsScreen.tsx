@@ -3,7 +3,9 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { api } from '../api';
 import { ErrorBanner } from '../components/ConfirmDialog';
 import { Markdown } from '../components/Markdown';
-import type { Project, SrsFileInfo } from '../types';
+import type { JobKind, Project, SrsFileInfo } from '../types';
+import { ReviewPanel } from './ReviewPanel';
+import { VersionsPanel } from './VersionsPanel';
 
 interface Props {
   project: Project;
@@ -11,7 +13,12 @@ interface Props {
   actions: ReactNode;
   /** Chỉ hiển thị nhãn Mới / Đã sửa khi vừa chạy xong một bước */
   showChanges: boolean;
+  /** Chạy tác vụ AI từ tab Rà soát (rà soát lại / sửa một lỗi) */
+  onStartJob: (kind: JobKind, findingId?: string) => Promise<void>;
+  onProjectChange: (p: Project) => void;
 }
+
+type Tab = 'docs' | 'review' | 'versions';
 
 interface TreeNode {
   name: string;
@@ -45,7 +52,10 @@ function buildTree(files: SrsFileInfo[]): TreeNode {
   return root;
 }
 
-export function SrsScreen({ project, actions, showChanges }: Props) {
+export function SrsScreen({ project, actions, showChanges, onStartJob, onProjectChange }: Props) {
+  // Dự án mới (có registry) mới có Rà soát / Phiên bản
+  const hasTabs = Boolean(project.projectType);
+  const [tab, setTab] = useState<Tab>(project.pendingFix ? 'review' : 'docs');
   const [files, setFiles] = useState<SrsFileInfo[]>([]);
   const [current, setCurrent] = useState('README.md');
   const [content, setContent] = useState('');
@@ -76,7 +86,9 @@ export function SrsScreen({ project, actions, showChanges }: Props) {
   const open = (path: string) => {
     if (draft !== null && draft !== content && !window.confirm('Bỏ các thay đổi chưa lưu?')) return;
     setCurrent(path);
+    setTab('docs');
   };
+  const reviewOpen = project.review ? project.review.critical + project.review.major + project.review.minor : null;
 
   const saveDraft = async () => {
     if (draft === null) return;
@@ -130,13 +142,55 @@ export function SrsScreen({ project, actions, showChanges }: Props) {
           <span className="tag-propose !rounded-full !px-3 !py-1 !font-medium">[ĐỀ XUẤT] × {totals.p}</span>
         </div>
         <span className="flex-1" />
-        <a className="btn-outline" href={`/api/projects/${project.slug}/srs.zip`} download>
-          ⬇ Tải về (.zip)
+        <a
+          className="btn-outline"
+          href={`/api/projects/${project.slug}/srs.zip`}
+          download
+          title="Toàn bộ thư mục SRS, kể cả file nội bộ (registry, rà soát)"
+        >
+          ⬇ {hasTabs ? 'Tải toàn bộ (nội bộ)' : 'Tải về (.zip)'}
         </a>
+        {hasTabs && (
+          <a className="btn-outline" href={`/api/projects/${project.slug}/export.zip?version=current`} download title="Chỉ các file SRS (.md) gửi khách">
+            ⬇ Gói gửi khách
+          </a>
+        )}
         {actions}
       </div>
 
       {error && <ErrorBanner message={error} onClose={() => setError('')} />}
+
+      {hasTabs && (
+        <div role="tablist" className="flex gap-1 border-b border-line">
+          {(
+            [
+              ['docs', 'Tài liệu'],
+              ['review', `Rà soát${reviewOpen !== null ? ` (${reviewOpen})` : ''}${project.pendingFix ? ' •' : ''}`],
+              ['versions', `Phiên bản${project.versions?.length ? ` (${project.versions.length})` : ''}`],
+            ] as [Tab, string][]
+          ).map(([t, text]) => (
+            <button
+              key={t}
+              type="button"
+              role="tab"
+              aria-selected={tab === t}
+              onClick={() => setTab(t)}
+              className={[
+                '-mb-px border-b-2 px-4 py-2 text-sm font-medium',
+                tab === t ? 'border-brand text-brand-dark' : 'border-transparent text-muted hover:text-stone-800',
+                t === 'review' && project.review?.critical ? 'text-red-700' : '',
+              ].join(' ')}
+            >
+              {text}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {hasTabs && tab === 'review' && (
+        <ReviewPanel project={project} onOpenFile={open} onStartJob={onStartJob} onProjectChange={onProjectChange} />
+      )}
+      {hasTabs && tab === 'versions' && <VersionsPanel project={project} onProjectChange={onProjectChange} />}
 
       {project.registryErrors && project.registryErrors.length > 0 && (
         <details className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
@@ -152,7 +206,7 @@ export function SrsScreen({ project, actions, showChanges }: Props) {
         </details>
       )}
 
-      <div className="flex flex-col gap-4 lg:flex-row">
+      <div className={['flex flex-col gap-4 lg:flex-row', hasTabs && tab !== 'docs' ? 'hidden' : ''].join(' ')}>
         <nav className="rounded-2xl border border-line bg-white p-2 shadow-sm lg:sticky lg:top-4 lg:max-h-[calc(100vh-8rem)] lg:w-72 lg:shrink-0 lg:overflow-y-auto">
           {files.length === 0 ? <p className="p-3 text-sm text-muted">Chưa có file SRS.</p> : renderNode(tree, 0)}
         </nav>

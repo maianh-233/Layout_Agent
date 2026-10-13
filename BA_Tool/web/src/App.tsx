@@ -21,6 +21,8 @@ const JOB_TITLES: Record<JobKind, string> = {
   'business-srs': 'AI đang viết SRS nghiệp vụ',
   'ui-questions': 'AI đang soạn bộ câu hỏi giao diện',
   'ui-srs': 'AI đang bổ sung SRS giao diện',
+  'srs-review': 'Đang rà soát chất lượng SRS',
+  'srs-fix': 'AI đang sửa lỗi trên bản nháp',
   prototype: 'AI đang dựng prototype',
 };
 
@@ -110,7 +112,8 @@ function ProjectView({ slug, onHome }: { slug: string; onHome: () => void }) {
     }
     await reload();
   };
-  const startJob = (kind: JobKind, targetDir?: string) => run(() => api.startJob(slug, kind, targetDir));
+  const startJob = (kind: JobKind, opts: { targetDir?: string; findingId?: string } = {}) =>
+    run(() => api.startJob(slug, kind, opts));
   const goScreen = async (s: Screen) => {
     try {
       setProject(await api.setScreen(slug, s));
@@ -168,6 +171,8 @@ function ProjectView({ slug, onHome }: { slug: string; onHome: () => void }) {
         body = (
           <SrsScreen
             project={project}
+            onStartJob={(kind, findingId) => startJob(kind, { findingId })}
+            onProjectChange={setProject}
             showChanges={project.screen === 'business-review'}
             actions={
               <button
@@ -185,6 +190,8 @@ function ProjectView({ slug, onHome }: { slug: string; onHome: () => void }) {
         body = (
           <SrsScreen
             project={project}
+            onStartJob={(kind, findingId) => startJob(kind, { findingId })}
+            onProjectChange={setProject}
             showChanges={project.screen === 'ui-review'}
             actions={
               <button type="button" className="btn-primary" onClick={() => void goScreen('prototype')}>
@@ -201,7 +208,7 @@ function ProjectView({ slug, onHome }: { slug: string; onHome: () => void }) {
             project={project}
             error=""
             onClearError={() => setJobError('')}
-            onBuild={(dir) => startJob('prototype', dir)}
+            onBuild={(dir) => startJob('prototype', { targetDir: dir })}
           />
         );
         break;
