@@ -46,6 +46,8 @@ function makePermission(allowedRoots: string[]): CanUseTool {
 
 const MAX_TURNS: Record<JobKind, number> = {
   'business-questions': 30,
+  'business-followup': 30,
+  'ui-followup': 30,
   'ui-questions': 30,
   'business-srs': 250,
   'ui-srs': 250,
@@ -55,6 +57,8 @@ const MAX_TURNS: Record<JobKind, number> = {
 /** CRM/ERP: nhiều module, nhiều màn hình hơn — vẫn chạy một lượt nên nới số bước. */
 const LARGE_MAX_TURNS: Record<JobKind, number> = {
   'business-questions': 60,
+  'business-followup': 50,
+  'ui-followup': 40,
   'ui-questions': 50,
   'business-srs': 600,
   'ui-srs': 500,

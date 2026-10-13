@@ -9,10 +9,14 @@ export interface Question {
   type: QuestionType;
   options: string[];
   srsSections: string[];
+  /** Chỉ hiện khi câu questionId được chọn một trong các đáp án includes */
+  showIf?: { questionId: string; includes: string | string[] };
+  /** Câu hỏi bổ sung: vì sao hỏi */
+  reason?: string;
 }
 
 export interface QuestionSet {
-  groups: { id: string; title: string; questions: Question[] }[];
+  groups: { id: string; title: string; questions: Question[]; followup?: boolean }[];
 }
 
 export interface Answer {
@@ -37,12 +41,21 @@ export const PROJECT_TYPE_OPTIONS: { value: ProjectType; label: string; hint: st
 export const projectTypeLabel = (t: ProjectType | undefined) =>
   PROJECT_TYPE_OPTIONS.find((o) => o.value === (t ?? 'website'))!.label;
 export type Screen = 'request' | 'business-qa' | 'business-review' | 'ui-qa' | 'ui-review' | 'prototype' | 'done';
-export type JobKind = 'business-questions' | 'business-srs' | 'ui-questions' | 'ui-srs' | 'prototype';
+export type JobKind =
+  | 'business-questions'
+  | 'business-followup'
+  | 'business-srs'
+  | 'ui-questions'
+  | 'ui-followup'
+  | 'ui-srs'
+  | 'prototype';
 
 export interface PhaseState {
   questions: QuestionSet | null;
   answers: Record<string, Answer>;
   currentIndex: number;
+  notes?: Record<string, string>;
+  followupStatus?: 'asked' | 'skipped';
 }
 
 export interface Project {
@@ -101,11 +114,39 @@ export interface DirListing {
 export interface FlatQuestion extends Question {
   groupId: string;
   groupTitle: string;
+  followup: boolean;
 }
 
 export function flatten(set: QuestionSet | null): FlatQuestion[] {
   if (!set) return [];
-  return set.groups.flatMap((g) => g.questions.map((q) => ({ ...q, groupId: g.id, groupTitle: g.title })));
+  return set.groups.flatMap((g) =>
+    g.questions.map((q) => ({ ...q, groupId: g.id, groupTitle: g.title, followup: Boolean(g.followup) })),
+  );
+}
+
+/**
+ * Tập id câu hỏi đang hiện (giống server/src/schemas.ts → visibleQuestionIds).
+ * Câu có showIf bị ẩn khi câu cổng bị ẩn, hoặc đã trả lời mà không chọn đáp án nào trong includes.
+ * Câu cổng chưa trả lời / "Chưa rõ" thì câu con vẫn hiện.
+ */
+export function visibleIds(questions: FlatQuestion[], answers: Record<string, Answer>): Set<string> {
+  const visible = new Set<string>();
+  for (const q of questions) {
+    if (!q.showIf) {
+      visible.add(q.id);
+      continue;
+    }
+    const gateId = q.showIf.questionId;
+    if (!visible.has(gateId)) continue;
+    const a = answers[gateId];
+    if (!hasContent(a)) {
+      visible.add(q.id);
+      continue;
+    }
+    const chosen = Array.isArray(a!.value) ? a!.value : [a!.value];
+    if ([q.showIf.includes].flat().some((v) => chosen.includes(v))) visible.add(q.id);
+  }
+  return visible;
 }
 
 /** Câu trả lời có nội dung hay chưa. */

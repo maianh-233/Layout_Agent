@@ -1,6 +1,6 @@
 ---
 name: srs-builder
-description: Hỗ trợ BA thu thập yêu cầu khách hàng và tạo tài liệu SRS tiếng Việt chia nhiều file (Phần 0–13), sinh bộ câu hỏi nghiệp vụ/giao diện bằng ngôn ngữ đời thường, và dựng prototype HTML + Tailwind + JS thuần với dữ liệu giả. Dùng khi tool "SRS & Prototype Builder" gọi với MODE business-questions, business-srs, ui-questions, ui-srs hoặc prototype.
+description: Hỗ trợ BA thu thập yêu cầu khách hàng và tạo tài liệu SRS tiếng Việt chia nhiều file (Phần 0–13), sinh bộ câu hỏi nghiệp vụ/giao diện bằng ngôn ngữ đời thường, và dựng prototype HTML + Tailwind + JS thuần với dữ liệu giả. Dùng khi tool "SRS & Prototype Builder" gọi với MODE business-questions, business-followup, business-srs, ui-questions, ui-followup, ui-srs hoặc prototype.
 ---
 
 # SRS Builder
@@ -8,7 +8,7 @@ description: Hỗ trợ BA thu thập yêu cầu khách hàng và tạo tài li�
 Skill được backend gọi bằng `/srs-builder` kèm các tham số dạng `KHÓA: giá trị`:
 
 ```
-MODE: <business-questions | business-srs | ui-questions | ui-srs | prototype>
+MODE: <business-questions | business-followup | business-srs | ui-questions | ui-followup | ui-srs | prototype>
 PROJECT_TYPE: <website | ecommerce | crm | erp | management-generic>
 PROJECT_DIR: <đường dẫn tuyệt đối tới workspace/<slug>>
 TARGET_DIR: <chỉ có ở MODE prototype — folder đích>
@@ -31,8 +31,8 @@ Tham số nhận được: $ARGUMENTS
 | File | Nội dung |
 |---|---|
 | `request.md` | Yêu cầu ban đầu của BA |
-| `answers-business.md` | Câu hỏi nghiệp vụ + câu trả lời (do backend tạo trước khi gọi `business-srs`) |
-| `answers-ui.md` | Câu hỏi giao diện + câu trả lời (do backend tạo trước khi gọi `ui-srs`) |
+| `answers-business.md` | Câu hỏi nghiệp vụ + câu trả lời + ghi chú BA (do backend tạo trước khi gọi `business-followup` / `business-srs`) |
+| `answers-ui.md` | Câu hỏi giao diện + câu trả lời + ghi chú BA (do backend tạo trước khi gọi `ui-followup` / `ui-srs`) |
 | `srs/` | Các file SRS |
 
 ## Các chế độ — đọc file nào, ghi file nào
@@ -41,6 +41,12 @@ Tham số nhận được: $ARGUMENTS
 1. Đọc `PROJECT_DIR/request.md`.
 2. Đọc [references/question-guide.md](references/question-guide.md) và [references/domains/README.md](references/domains/README.md), rồi đọc **đúng một** file `references/domains/<PROJECT_TYPE>.md`.
 3. Ghi bộ câu hỏi nghiệp vụ ra `PROJECT_DIR/questions-business.json` đúng định dạng JSON trong question-guide, **số câu theo file domain**. Dùng mục 1–4 của file domain làm danh sách kiểm tra để không sót chủ đề. Chỉ ghi file này.
+
+### `business-followup` / `ui-followup` — vòng câu hỏi bổ sung
+1. Đọc `answers-<phase>.md` (`business` hoặc `ui`) và mục "Vòng câu hỏi bổ sung" trong [references/question-guide.md](references/question-guide.md).
+2. `business-followup`: đọc thêm `request.md` và mục 4–5 của `references/domains/<PROJECT_TYPE>.md`.
+   `ui-followup`: đọc thêm `srs/README.md`, `srs/02-overall-description.md`, `srs/05-functional/README.md` để đối chiếu câu trả lời giao diện với vai trò / module đã có.
+3. Ghi **chỉ** `PROJECT_DIR/followup-<phase>.json` (tối đa 15 câu, mỗi câu có `reason`; không có gì cần hỏi thì `{ "groups": [] }`). Không sửa file nào khác.
 
 ### `business-srs`
 1. Đọc `request.md`, `answers-business.md`. Có thể đọc `references/domains/<PROJECT_TYPE>.md` **chỉ để phát hiện chủ đề khách chưa trả lời** → ghi vào 13.9 (hoặc `[ĐỀ XUẤT]`). Module khách không xác nhận thì không đưa vào SRS.

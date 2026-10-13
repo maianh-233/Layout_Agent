@@ -31,8 +31,12 @@ export const api = {
     call<{ jobId: string }>(`/api/projects/${slug}/request`, json('POST', { request })),
   startJob: (slug: string, kind: JobKind, targetDir?: string) =>
     call<{ jobId: string }>(`/api/projects/${slug}/jobs`, json('POST', { kind, targetDir })),
-  saveAnswers: (slug: string, phase: Phase, answers: Record<string, Answer>, currentIndex: number) =>
-    call<{ ok: true }>(`/api/projects/${slug}/answers/${phase}`, json('PUT', { answers, currentIndex })),
+  saveAnswers: (
+    slug: string,
+    phase: Phase,
+    data: { answers: Record<string, Answer>; currentIndex: number; notes: Record<string, string> },
+    opts: { keepalive?: boolean } = {},
+  ) => call<{ ok: true }>(`/api/projects/${slug}/answers/${phase}`, { ...json('PUT', data), keepalive: opts.keepalive }),
   listSrs: (slug: string) => call<SrsFileInfo[]>(`/api/projects/${slug}/srs`),
   readSrs: (slug: string, path: string) =>
     call<{ content: string }>(`/api/projects/${slug}/srs/file?path=${encodeURIComponent(path)}`),

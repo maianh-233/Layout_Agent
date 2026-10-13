@@ -20,7 +20,7 @@ import {
 } from './projects.js';
 import { attachClient, getJob, reconcileJob, retryLastJob, startJob } from './jobs.js';
 import { checkWritable, listDir, makeDir } from './fsbrowse.js';
-import { PROJECT_TYPES, SaveAnswersSchema, type Screen } from './schemas.js';
+import { JOB_KINDS, PROJECT_TYPES, SaveAnswersSchema, type Screen } from './schemas.js';
 
 const app = express();
 app.use(express.json({ limit: '5mb' }));
@@ -99,7 +99,7 @@ app.post('/api/projects/:slug/request', h(async (req, res) => {
 app.post('/api/projects/:slug/jobs', h(async (req, res) => {
   const body = z
     .object({
-      kind: z.enum(['business-questions', 'business-srs', 'ui-questions', 'ui-srs', 'prototype']),
+      kind: z.enum(JOB_KINDS),
       targetDir: z.string().optional(),
     })
     .parse(req.body);
@@ -144,9 +144,16 @@ app.get('/api/jobs/:id/events', (req, res) => {
 app.put('/api/projects/:slug/answers/:phase', h(async (req, res) => {
   const phase = z.enum(['business', 'ui']).parse(param(req, 'phase'));
   const body = SaveAnswersSchema.parse(req.body);
-  const p = await loadProject(param(req, 'slug'));
+  const p = reconcileJob(await loadProject(param(req, 'slug')));
+  // AI đang chạy (ví dụ vòng bổ sung sắp gắn thêm câu hỏi): bỏ qua lần lưu muộn từ trình duyệt
+  // (lưu khi rời trang) để không ghi đè vị trí câu hỏi do tác vụ cập nhật.
+  if (p.job?.status === 'running') {
+    res.json({ ok: true, skipped: true });
+    return;
+  }
   p[phase].answers = body.answers;
   p[phase].currentIndex = body.currentIndex;
+  if (body.notes) p[phase].notes = body.notes;
   await saveProject(p);
   res.json({ ok: true });
 }));

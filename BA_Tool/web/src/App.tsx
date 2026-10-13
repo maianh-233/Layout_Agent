@@ -16,6 +16,8 @@ const readSlug = () => /^#\/p\/([a-z0-9-]+)/.exec(window.location.hash)?.[1] ?? 
 
 const JOB_TITLES: Record<JobKind, string> = {
   'business-questions': 'AI đang soạn bộ câu hỏi nghiệp vụ',
+  'business-followup': 'AI đang rà soát câu trả lời nghiệp vụ',
+  'ui-followup': 'AI đang rà soát câu trả lời giao diện',
   'business-srs': 'AI đang viết SRS nghiệp vụ',
   'ui-questions': 'AI đang soạn bộ câu hỏi giao diện',
   'ui-srs': 'AI đang bổ sung SRS giao diện',
@@ -149,10 +151,18 @@ function ProjectView({ slug, onHome }: { slug: string; onHome: () => void }) {
         body = <RequestScreen initial={project.request} onSubmit={(t) => run(() => api.submitRequest(slug, t))} />;
         break;
       case 'business-qa':
-        body = <QAScreen project={project} phase="business" onFinish={() => startJob('business-srs')} />;
+        body = (
+          <QAScreen
+            project={project}
+            phase="business"
+            onFinish={(mode) => startJob(mode === 'followup' ? 'business-followup' : 'business-srs')}
+          />
+        );
         break;
       case 'ui-qa':
-        body = <QAScreen project={project} phase="ui" onFinish={() => startJob('ui-srs')} />;
+        body = (
+          <QAScreen project={project} phase="ui" onFinish={(mode) => startJob(mode === 'followup' ? 'ui-followup' : 'ui-srs')} />
+        );
         break;
       case 'business-review':
         body = (

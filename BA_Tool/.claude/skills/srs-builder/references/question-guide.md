@@ -99,5 +99,55 @@ Ghi **chỉ JSON hợp lệ**, không kèm chú thích hay markdown:
 ```
 
 - `id` nhóm: `g1`, `g2`…; `id` câu hỏi: `q1`, `q2`… **duy nhất trong cả file**, đánh số liên tục.
-- Mọi trường đều bắt buộc. `options` là `[]` khi `type` là `text`.
+- Các trường trên đều bắt buộc. `options` là `[]` khi `type` là `text`.
 - `srsSections` có ít nhất 1 phần tử.
+- `showIf` không bắt buộc — xem mục dưới.
+
+## Câu hỏi rẽ nhánh (`showIf`)
+
+Dùng để **ẩn câu hỏi chi tiết của phần khách không cần**. Bắt buộc dùng cho CRM / ERP / hệ thống quản lý; website chỉ dùng khi thật sự có nhánh (ví dụ "có bán online không").
+
+```json
+{
+  "id": "q12",
+  "text": "Công ty mình cần quản lý những phần việc nào trên phần mềm?",
+  "hint": "Chọn tất cả phần anh/chị muốn có ở giai đoạn này.",
+  "type": "multi",
+  "options": ["Mua hàng từ nhà cung cấp", "Bán hàng", "Kho hàng", "Công nợ", "Sản xuất"],
+  "srsSections": ["1.5", "5.1"]
+},
+{
+  "id": "q40",
+  "text": "Một lệnh sản xuất thường đi qua những bước nào?",
+  "hint": "...",
+  "type": "text",
+  "options": [],
+  "srsSections": ["3.4", "5.3"],
+  "showIf": { "questionId": "q12", "includes": "Sản xuất" }
+}
+```
+
+Quy tắc (backend kiểm tra, sai là bị trả về sửa):
+- `questionId` phải là câu **đứng trước** và có `type` là `single` hoặc `multi`.
+- `includes` là **một chuỗi** hoặc **mảng chuỗi**, mỗi chuỗi **trùng nguyên văn** một phần tử trong `options` của câu đó. Câu hiện khi khách chọn ít nhất một giá trị trong `includes`.
+- Câu cổng chưa trả lời / "Chưa rõ" → câu con vẫn hiện (chưa rõ thì vẫn hỏi).
+- Được rẽ nhánh nhiều tầng (câu con làm cổng cho câu khác).
+- Mỗi module: một nhóm riêng, **mọi câu trong nhóm** có `showIf` trỏ về câu chọn module. Có thể thêm câu cổng `single` "Có / Không" bên trong module cho tính năng phụ (ví dụ "Có theo dõi lô / hạn dùng không?").
+- Không gắn `showIf` cho các nhóm chung (Tổng quan, Vai trò, Quy tắc chung, Phi chức năng).
+
+## Vòng câu hỏi bổ sung (`business-followup`, `ui-followup`)
+
+Ghi ra `followup-<phase>.json` cùng định dạng, khác ở:
+- **Tối đa 15 câu**, có thể ít hơn. Không có gì cần hỏi thì ghi `{ "groups": [] }`.
+- Mỗi câu **bắt buộc có `reason`**: một câu ngắn cho BA biết vì sao hỏi và liên quan câu nào, bắt đầu bằng `Thiếu:`, `Mơ hồ:`, `Mâu thuẫn:` hoặc `Ghi chú BA:`. Ví dụ: `"Mâu thuẫn: q23 nói trừ kho khi duyệt đơn, q41 nói trừ kho khi xuất hàng."`
+- Không dùng `showIf`. `id` đặt tùy ý (`f1`, `f2`…) — backend tự đánh lại.
+- Nhóm theo chủ đề (ví dụ "Bán hàng — làm rõ", "Kho — làm rõ"), sắp theo mức ảnh hưởng tới SRS, quan trọng trước.
+- Câu hỏi vẫn bằng ngôn ngữ đời thường, **nhắc lại điều khách đã nói** để khách hiểu ngữ cảnh: "Ở phần trước anh/chị cho biết …, nhưng cũng nói … Vậy thực tế …?"
+
+Chọn câu để hỏi theo thứ tự ưu tiên:
+1. **Mâu thuẫn** giữa hai câu trả lời (xem mục "Mâu thuẫn hay gặp" của file domain).
+2. **Ghi chú BA** cho thấy khách còn phân vân / cần hỏi người khác.
+3. **Thiếu** chủ đề bắt buộc (mục 4 file domain) của phần khách đã chọn, hoặc câu quan trọng bị "Chưa rõ".
+4. **Mơ hồ**: câu trả lời không kiểm thử được ("nhanh", "tùy trường hợp", "như bình thường", "nhiều").
+
+Không hỏi lại câu khách đã trả lời rõ. Không hỏi về phần "Không áp dụng".

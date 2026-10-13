@@ -8,24 +8,32 @@ interface Props {
   confirmLabel: string;
   onConfirm: () => void;
   onCancel: () => void;
+  /** Nút phụ (viền) đặt cạnh nút chính, ví dụ "Bỏ qua, tạo SRS luôn" */
+  secondaryLabel?: string;
+  onSecondary?: () => void;
 }
 
-export function ConfirmDialog({ open, title, children, confirmLabel, onConfirm, onCancel }: Props) {
+export function ConfirmDialog({ open, title, children, confirmLabel, onConfirm, onCancel, secondaryLabel, onSecondary }: Props) {
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-stone-900/40 p-4" onClick={onCancel}>
       <div
         role="dialog"
         aria-modal="true"
-        className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl"
+        className={['w-full rounded-2xl bg-white p-6 shadow-xl', secondaryLabel ? 'max-w-xl' : 'max-w-md'].join(' ')}
         onClick={(e) => e.stopPropagation()}
       >
         <h2 className="text-lg font-semibold">{title}</h2>
         <div className="mt-3 text-sm leading-6 text-stone-600">{children}</div>
-        <div className="mt-6 flex justify-end gap-3">
+        <div className="mt-6 flex flex-wrap justify-end gap-3">
           <button type="button" className="btn-ghost" onClick={onCancel}>
             Quay lại
           </button>
+          {secondaryLabel && onSecondary && (
+            <button type="button" className="btn-outline" onClick={onSecondary}>
+              {secondaryLabel}
+            </button>
+          )}
           <button type="button" className="btn-primary" onClick={onConfirm} autoFocus>
             {confirmLabel}
           </button>

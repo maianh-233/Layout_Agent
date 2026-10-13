@@ -3,7 +3,17 @@ import fs from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { WORKSPACE_DIR } from './config.js';
-import { PROJECT_TYPE_LABELS, projectTypeOf, type Answer, type Phase, type Project, type ProjectType, type QuestionSet } from './schemas.js';
+import {
+  OTHER,
+  PROJECT_TYPE_LABELS,
+  projectTypeOf,
+  visibleQuestionIds,
+  type Answer,
+  type Phase,
+  type Project,
+  type ProjectType,
+  type QuestionSet,
+} from './schemas.js';
 
 export class HttpError extends Error {
   constructor(public status: number, message: string) {
@@ -109,34 +119,57 @@ export async function writeRequestFile(p: Project) {
 function formatAnswer(a: Answer | undefined): string {
   if (!a || a.status === 'skipped') return '**Chưa rõ / Bỏ qua** → cần ghi [CẦN XÁC NHẬN]';
   const vals = Array.isArray(a.value) ? a.value : [a.value];
-  const parts = vals.filter((v) => v && v !== '__other__');
+  const parts = vals.filter((v) => v && v !== OTHER);
   if (a.other?.trim()) parts.push(`Khác: ${a.other.trim()}`);
   return parts.length ? parts.join('; ') : '**Chưa rõ / Bỏ qua** → cần ghi [CẦN XÁC NHẬN]';
 }
 
-/** Tạo answers-<phase>.md (câu hỏi + câu trả lời) — gọn hơn JSON, tiết kiệm token. */
+/**
+ * Tạo answers-<phase>.md (câu hỏi + câu trả lời) — gọn hơn JSON, tiết kiệm token.
+ * Câu bị ẩn do rẽ nhánh ghi "Không áp dụng" (không tính là bỏ qua). Ghi chú BA kèm theo để AI
+ * biết chỗ nào cần [CẦN XÁC NHẬN], nhưng không chép nguyên văn vào SRS.
+ */
 export async function writeAnswersFile(p: Project, phase: Phase) {
   const st = p[phase];
   if (!st.questions) throw new HttpError(400, 'Chưa có bộ câu hỏi');
   const title = phase === 'business' ? 'nghiệp vụ' : 'giao diện';
+  const visible = visibleQuestionIds(st.questions, st.answers);
+  const byId = new Map(st.questions.groups.flatMap((g) => g.questions).map((q) => [q.id, q]));
   let md = `# Câu trả lời ${title} — ${p.name}\n\n`;
+  md +=
+    '> Ghi chú BA là nhận xét nội bộ: dùng để biết chỗ nào cần `[CẦN XÁC NHẬN]` / 13.9, không chép nguyên văn vào SRS.\n' +
+    '> "Không áp dụng" = câu bị ẩn vì khách không chọn phần liên quan — không đưa phần đó vào SRS.\n\n';
   let skipped = 0;
+  let hidden = 0;
   for (const g of st.questions.groups) {
-    md += `## ${g.title}\n\n`;
+    md += `## ${g.followup ? 'Câu hỏi bổ sung — ' : ''}${g.title}\n\n`;
     for (const q of g.questions) {
+      md += `- **${q.id}** (SRS ${q.srsSections.join(', ')}): ${q.text}\n`;
+      if (q.reason) md += `  - Lý do hỏi bổ sung: ${q.reason}\n`;
+      if (!visible.has(q.id)) {
+        hidden++;
+        const gate = q.showIf && byId.get(q.showIf.questionId);
+        const why = gate ? `${gate.id} không chọn "${[q.showIf!.includes].flat().join('" / "')}"` : 'rẽ nhánh';
+        md += `  - Trả lời: Không áp dụng (ẩn vì ${why})\n`;
+        continue;
+      }
       const a = st.answers[q.id];
       if (!a || a.status === 'skipped') skipped++;
-      md += `- **${q.id}** (SRS ${q.srsSections.join(', ')}): ${q.text}\n  - Trả lời: ${formatAnswer(a)}\n`;
+      md += `  - Trả lời: ${formatAnswer(a)}\n`;
+      const note = st.notes?.[q.id]?.trim();
+      if (note) md += `  - Ghi chú BA (nội bộ): ${note.replace(/\s*\n\s*/g, ' / ')}\n`;
     }
     md += '\n';
   }
-  md += `---\nSố câu chưa rõ / bỏ qua: ${skipped}\n`;
+  md += `---\nSố câu chưa rõ / bỏ qua: ${skipped}\nSố câu không áp dụng (ẩn do rẽ nhánh): ${hidden}\n`;
   await fs.writeFile(path.join(projectDir(p.slug), `answers-${phase}.md`), md, 'utf8');
 }
 
-export async function readQuestionsFile(slug: string, phase: Phase): Promise<unknown> {
-  const file = path.join(projectDir(slug), `questions-${phase}.json`);
-  if (!existsSync(file)) throw new Error(`AI chưa tạo file questions-${phase}.json`);
+/** Đọc file JSON do AI ghi: questions-<phase>.json hoặc followup-<phase>.json. */
+export async function readQuestionsFile(slug: string, phase: Phase, kind: 'questions' | 'followup' = 'questions'): Promise<unknown> {
+  const name = `${kind}-${phase}.json`;
+  const file = path.join(projectDir(slug), name);
+  if (!existsSync(file)) throw new Error(`AI chưa tạo file ${name}`);
   const raw = (await fs.readFile(file, 'utf8')).replace(/^﻿/, '').trim();
   // Phòng khi AI bọc JSON trong ```json ... ```
   const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '');
@@ -151,6 +184,30 @@ export function normalizeQuestions(set: QuestionSet): QuestionSet {
       else q.options = q.options.filter((o) => !/^khác\b/i.test(o.trim()));
     }
   return set;
+}
+
+/**
+ * Gắn câu hỏi bổ sung vào cuối bộ câu hỏi. Đổi id thành f1, f2… / fg1, fg2… để không trùng câu cũ.
+ * Trả về vị trí (trong danh sách phẳng) của câu bổ sung đầu tiên.
+ */
+export function appendFollowup(set: QuestionSet, extra: QuestionSet): number {
+  const firstIndex = set.groups.reduce((n, g) => n + g.questions.length, 0);
+  const used = new Set(set.groups.flatMap((g) => [g.id, ...g.questions.map((q) => q.id)]));
+  const nextId = (prefix: string) => {
+    let i = 1;
+    while (used.has(`${prefix}${i}`)) i++;
+    used.add(`${prefix}${i}`);
+    return `${prefix}${i}`;
+  };
+  for (const g of extra.groups) {
+    set.groups.push({
+      ...g,
+      id: nextId('fg'),
+      followup: true,
+      questions: g.questions.map(({ showIf: _drop, ...q }) => ({ ...q, id: nextId('f') })),
+    });
+  }
+  return firstIndex;
 }
 
 // ---------- File SRS ----------

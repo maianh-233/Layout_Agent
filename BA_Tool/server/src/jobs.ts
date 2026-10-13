@@ -6,6 +6,7 @@ import type { Response } from 'express';
 import { AgentError, runSkill, type AgentEvent } from './agent.js';
 import {
   HttpError,
+  appendFollowup,
   diffSrs,
   loadProject,
   normalizeQuestions,
@@ -17,7 +18,7 @@ import {
   writeAnswersFile,
   writeRequestFile,
 } from './projects.js';
-import { QuestionSetSchema, projectTypeOf, type JobKind, type Phase, type Project } from './schemas.js';
+import { FollowupSetSchema, QuestionSetSchema, projectTypeOf, type JobKind, type Phase, type Project } from './schemas.js';
 
 export type JobEvent =
   | AgentEvent
@@ -114,6 +115,9 @@ export async function startJob(slug: string, kind: JobKind, params: { targetDir?
 export async function retryLastJob(slug: string): Promise<string> {
   const p = reconcileJob(await loadProject(slug));
   if (!p.job || p.job.status !== 'error') throw new HttpError(400, 'Không có bước nào cần chạy lại.');
+  // Vòng bổ sung đã xong (không có câu nào) nhưng lỗi lúc viết SRS → chỉ chạy lại phần viết SRS
+  if (p.job.kind === 'business-followup' && p.business.followupStatus) return startJob(slug, 'business-srs');
+  if (p.job.kind === 'ui-followup' && p.ui.followupStatus) return startJob(slug, 'ui-srs');
   return startJob(slug, p.job.kind, { targetDir: p.job.targetDir });
 }
 
@@ -134,8 +138,34 @@ async function runJob(job: Job, params: { targetDir?: string }) {
     return path.relative(base, f).split(path.sep).join('/');
   };
   const onEvent = (e: AgentEvent) => emit(job, e.type === 'file' ? { ...e, path: relFile(e.path) } : e);
-  const run = (extra?: string) =>
-    runSkill({ mode: job.kind, projectType, projectDir: dir, targetDir: params.targetDir, extra, onEvent, signal: job.abort.signal });
+  const runAs = (mode: JobKind, extra?: string) =>
+    runSkill({ mode, projectType, projectDir: dir, targetDir: params.targetDir, extra, onEvent, signal: job.abort.signal });
+  const run = (extra?: string) => runAs(job.kind, extra);
+
+  /** Viết SRS nghiệp vụ / bổ sung SRS giao diện (dùng cho tác vụ *-srs và khi vòng bổ sung không có câu nào). */
+  const runSrs = async (phase: Phase) => {
+    const p = await loadProject(job.slug);
+    await writeAnswersFile(p, phase);
+    await fs.mkdir(srsDir(job.slug), { recursive: true });
+    const before = await snapshotSrs(job.slug);
+    emit(job, { type: 'step', text: phase === 'business' ? 'Đang viết SRS nghiệp vụ…' : 'Đang bổ sung SRS giao diện…' });
+    await runAs(phase === 'business' ? 'business-srs' : 'ui-srs');
+    const changes = await diffSrs(job.slug, before);
+    if (!changes.some((c) => c.path === 'README.md') && !before.has('README.md')) {
+      throw new Error('AI chưa tạo được mục lục srs/README.md. Hãy thử chạy lại.');
+    }
+    // Kiểm tra theo trạng thái file sau khi chạy (không chỉ file thay đổi lần này):
+    // khi "Chạy lại" sau lỗi giữa chừng, file có thể đã được tạo từ lần trước.
+    const inventory = path.join(srsDir(job.slug), '09-ui-ux', '03-screen-inventory.md');
+    if (phase === 'ui' && !(await fs.access(inventory).then(() => true, () => false))) {
+      throw new Error('AI chưa tạo 09-ui-ux/03-screen-inventory.md. Hãy thử chạy lại.');
+    }
+    await updateProject(job.slug, (pr) => {
+      pr.srsChanges = changes;
+      pr.screen = phase === 'business' ? 'business-review' : 'ui-review';
+    });
+    emit(job, { type: 'step', text: `Hoàn tất: ${changes.length} file SRS được tạo / cập nhật.` });
+  };
 
   switch (job.kind) {
     case 'business-questions':
@@ -167,32 +197,45 @@ async function runJob(job: Job, params: { targetDir?: string }) {
       return;
     }
 
-    case 'business-srs':
-    case 'ui-srs': {
-      const phase: Phase = job.kind === 'business-srs' ? 'business' : 'ui';
+    case 'business-followup':
+    case 'ui-followup': {
+      const phase: Phase = job.kind === 'business-followup' ? 'business' : 'ui';
       const p = await loadProject(job.slug);
       await writeAnswersFile(p, phase);
-      await fs.mkdir(srsDir(job.slug), { recursive: true });
-      const before = await snapshotSrs(job.slug);
-      emit(job, { type: 'step', text: phase === 'business' ? 'Đang viết SRS nghiệp vụ…' : 'Đang bổ sung SRS giao diện…' });
+      emit(job, { type: 'step', text: 'AI đang rà soát câu trả lời: tìm chỗ thiếu, mơ hồ, mâu thuẫn…' });
+      await fs.rm(path.join(dir, `followup-${phase}.json`), { force: true });
       await run();
-      const changes = await diffSrs(job.slug, before);
-      if (!changes.some((c) => c.path === 'README.md') && !before.has('README.md')) {
-        throw new Error('AI chưa tạo được mục lục srs/README.md. Hãy thử chạy lại.');
+      let parsed = await validateQuestions(job.slug, phase, 'followup');
+      if (!parsed.ok) {
+        emit(job, { type: 'step', text: 'Câu hỏi bổ sung sai định dạng, đang yêu cầu AI sửa lại (lần 2)…' });
+        await run(
+          `LẦN TRƯỚC FILE followup-${phase}.json KHÔNG HỢP LỆ:\n${parsed.error}\n` +
+            `Hãy ghi lại file đó đúng định dạng trong mục "Vòng câu hỏi bổ sung" của references/question-guide.md.`,
+        );
+        parsed = await validateQuestions(job.slug, phase, 'followup');
+        if (!parsed.ok) throw new Error(`AI trả về câu hỏi bổ sung sai định dạng sau 2 lần thử:\n${parsed.error}`);
       }
-      // Kiểm tra theo trạng thái file sau khi chạy (không chỉ file thay đổi lần này):
-      // khi "Chạy lại" sau lỗi giữa chừng, file có thể đã được tạo từ lần trước.
-      const inventory = path.join(srsDir(job.slug), '09-ui-ux', '03-screen-inventory.md');
-      if (phase === 'ui' && !(await fs.access(inventory).then(() => true, () => false))) {
-        throw new Error('AI chưa tạo 09-ui-ux/03-screen-inventory.md. Hãy thử chạy lại.');
-      }
+      const extra = parsed.value;
+      const n = extra.groups.reduce((s, g) => s + g.questions.length, 0);
       await updateProject(job.slug, (pr) => {
-        pr.srsChanges = changes;
-        pr.screen = phase === 'business' ? 'business-review' : 'ui-review';
+        const st = pr[phase];
+        st.followupStatus = 'asked';
+        if (n > 0 && st.questions) st.currentIndex = appendFollowup(st.questions, extra);
       });
-      emit(job, { type: 'step', text: `Hoàn tất: ${changes.length} file SRS được tạo / cập nhật.` });
+      if (n > 0) {
+        emit(job, { type: 'step', text: `Có ${n} câu hỏi bổ sung cần khách trả lời.` });
+        return;
+      }
+      // Không còn gì cần hỏi → viết SRS luôn trong cùng lượt
+      emit(job, { type: 'step', text: 'Không có điểm nào cần hỏi thêm.' });
+      await runSrs(phase);
       return;
     }
+
+    case 'business-srs':
+    case 'ui-srs':
+      await runSrs(job.kind === 'business-srs' ? 'business' : 'ui');
+      return;
 
     case 'prototype': {
       const target = params.targetDir!;
@@ -210,10 +253,10 @@ async function runJob(job: Job, params: { targetDir?: string }) {
   }
 }
 
-async function validateQuestions(slug: string, phase: Phase) {
+async function validateQuestions(slug: string, phase: Phase, kind: 'questions' | 'followup' = 'questions') {
   try {
-    const raw = await readQuestionsFile(slug, phase);
-    const r = QuestionSetSchema.safeParse(raw);
+    const raw = await readQuestionsFile(slug, phase, kind);
+    const r = (kind === 'followup' ? FollowupSetSchema : QuestionSetSchema).safeParse(raw);
     if (r.success) return { ok: true as const, value: normalizeQuestions(r.data) };
     const error = r.error.issues
       .slice(0, 15)
