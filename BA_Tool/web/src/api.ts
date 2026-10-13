@@ -9,6 +9,7 @@ import type {
   Phase,
   Project,
   ProjectType,
+  QaReport,
   Review,
   Screen,
   SrsFileInfo,
@@ -45,6 +46,7 @@ export const api = {
     call<{ jobId: string }>(`/api/projects/${slug}/request`, json('POST', { request })),
   startJob: (slug: string, kind: JobKind, opts: { targetDir?: string; findingId?: string } = {}) =>
     call<{ jobId: string }>(`/api/projects/${slug}/jobs`, json('POST', { kind, ...opts })),
+  getQa: (slug: string) => call<QaReport | null>(`/api/projects/${slug}/qa`),
   getReview: (slug: string) => call<Review | null>(`/api/projects/${slug}/review`),
   getFix: (slug: string) => call<{ finding: Finding | null; diffs: FileDiff[] }>(`/api/projects/${slug}/fix`),
   applyFix: (slug: string) => call<Project>(`/api/projects/${slug}/fix/apply`, { method: 'POST' }),

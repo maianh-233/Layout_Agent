@@ -2,23 +2,27 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api';
 import { ConfirmDialog, ErrorBanner } from '../components/ConfirmDialog';
-import type { DirListing, Project } from '../types';
+import { Markdown } from '../components/Markdown';
+import type { DirListing, JobKind, Project } from '../types';
+import { QaPanel } from './QaPanel';
 
 interface Props {
   project: Project;
   onBuild: (dir: string) => Promise<void>;
   error: string;
   onClearError: () => void;
+  /** Chạy QA / để AI sửa lỗi QA */
+  onStartJob: (kind: JobKind) => Promise<void>;
 }
 
-export function PrototypeScreen({ project, onBuild, error, onClearError }: Props) {
+export function PrototypeScreen({ project, onBuild, error, onClearError, onStartJob }: Props) {
   const built = project.screen === 'done' && project.prototype.dir;
   const [browsing, setBrowsing] = useState(!built);
   return (
     <div className="space-y-6">
       {error && <ErrorBanner message={error} onClose={onClearError} />}
       {built && !browsing ? (
-        <Preview project={project} onRebuild={() => setBrowsing(true)} />
+        <Preview project={project} onRebuild={() => setBrowsing(true)} onStartJob={onStartJob} />
       ) : (
         <FolderPicker
           initial={project.prototype.dir}
@@ -180,11 +184,21 @@ function FolderPicker({ initial, onBuild, onCancel }: { initial: string | null; 
   );
 }
 
-function Preview({ project, onRebuild }: { project: Project; onRebuild: () => void }) {
+type View = 'preview' | 'qa' | 'handoff';
+
+function Preview({ project, onRebuild, onStartJob }: { project: Project; onRebuild: () => void; onStartJob: (kind: JobKind) => Promise<void> }) {
   const pages = project.prototype.pages;
   const [page, setPage] = useState(pages.includes('index.html') ? 'index.html' : pages[0]);
   const bust = encodeURIComponent(project.prototype.builtAt ?? '');
   const url = `/preview/${project.slug}/${page}?v=${bust}`;
+  // Dự án mới có QA tự động + HANDOFF.md
+  const hasQa = Boolean(project.projectType);
+  const [view, setView] = useState<View>('preview');
+  const qaCount = project.qa ? project.qa.critical + project.qa.major + project.qa.minor : null;
+  const openPage = (p: string) => {
+    if (pages.includes(p)) setPage(p);
+    setView('preview');
+  };
 
   return (
     <div className="flex flex-col gap-4 lg:flex-row">
@@ -215,7 +229,36 @@ function Preview({ project, onRebuild }: { project: Project; onRebuild: () => vo
           ))}
         </nav>
       </aside>
-      <div className="min-w-0 flex-1 overflow-hidden rounded-2xl border border-line bg-white shadow-sm">
+      <div className="min-w-0 flex-1 space-y-3">
+      {hasQa && (
+        <div role="tablist" className="flex gap-1 border-b border-line">
+          {(
+            [
+              ['preview', 'Xem trước'],
+              ['qa', `QA${qaCount !== null ? ` (${qaCount})` : ''}`],
+              ['handoff', 'HANDOFF.md'],
+            ] as [View, string][]
+          ).map(([v, text]) => (
+            <button
+              key={v}
+              type="button"
+              role="tab"
+              aria-selected={view === v}
+              onClick={() => setView(v)}
+              className={[
+                '-mb-px border-b-2 px-4 py-2 text-sm font-medium',
+                view === v ? 'border-brand text-brand-dark' : 'border-transparent text-muted hover:text-stone-800',
+                v === 'qa' && project.qa?.critical ? 'text-red-700' : '',
+              ].join(' ')}
+            >
+              {text}
+            </button>
+          ))}
+        </div>
+      )}
+      {view === 'qa' && <QaPanel project={project} onStartJob={onStartJob} onOpenPage={openPage} />}
+      {view === 'handoff' && <Handoff slug={project.slug} version={project.qa?.createdAt ?? bust} />}
+      <div className={['overflow-hidden rounded-2xl border border-line bg-white shadow-sm', view === 'preview' ? '' : 'hidden'].join(' ')}>
         <div className="flex items-center gap-2 border-b border-line bg-stone-50 px-4 py-2">
           <span className="size-2.5 rounded-full bg-red-300" />
           <span className="size-2.5 rounded-full bg-amber-300" />
@@ -224,6 +267,25 @@ function Preview({ project, onRebuild }: { project: Project; onRebuild: () => vo
         </div>
         <iframe key={url} title="Xem trước prototype" src={url} className="h-[75vh] w-full bg-white" />
       </div>
+      </div>
     </div>
+  );
+}
+
+/** HANDOFF.md do tool sinh sau QA — hiển thị như tài liệu. */
+function Handoff({ slug, version }: { slug: string; version: string }) {
+  const [text, setText] = useState<string | null>(null);
+  useEffect(() => {
+    fetch(`/preview/${slug}/HANDOFF.md?v=${encodeURIComponent(version)}`)
+      .then((r) => (r.ok ? r.text() : ''))
+      .then(setText)
+      .catch(() => setText(''));
+  }, [slug, version]);
+  if (text === null) return <p className="text-sm text-muted">Đang tải…</p>;
+  if (!text) return <p className="text-sm text-muted">Chưa có HANDOFF.md — chạy QA để tool sinh tài liệu bàn giao.</p>;
+  return (
+    <article className="rounded-2xl border border-line bg-white p-5 shadow-sm sm:p-8">
+      <Markdown source={text} />
+    </article>
   );
 }

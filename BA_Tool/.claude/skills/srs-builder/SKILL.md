@@ -8,7 +8,7 @@ description: Hỗ trợ BA thu thập yêu cầu khách hàng và tạo tài li�
 Skill được backend gọi bằng `/srs-builder` kèm các tham số dạng `KHÓA: giá trị`:
 
 ```
-MODE: <business-questions | business-followup | business-srs | ui-questions | ui-followup | ui-srs | srs-review | srs-fix | prototype>
+MODE: <business-questions | business-followup | business-srs | ui-questions | ui-followup | ui-srs | srs-review | srs-fix | prototype | prototype-fix>
 PROJECT_TYPE: <website | ecommerce | crm | erp | management-generic>
 SRS_MODE: <registry | legacy>
 PROJECT_DIR: <đường dẫn tuyệt đối tới workspace/<slug>>
@@ -31,6 +31,8 @@ Tham số nhận được: $ARGUMENTS
   - `registry` — dự án mới: mọi mã theo `<LOẠI>-<MODULE>-<3 số>` và được đăng ký trong `srs/_registry.json`; phân quyền ở `srs/_permissions.json`. Đọc [references/registry-guide.md](references/registry-guide.md). Tra mã / file bằng registry thay vì mở hết các file SRS. `12-traceability.md` và bảng 4.2 do code sinh.
   - `legacy` — dự án cũ: giữ cách viết cũ (mã `FR-001`…, tự viết Phần 12).
 - Có phần `SỬA REGISTRY` trong prompt → chỉ làm theo mục 6 của registry-guide, bỏ qua các bước bình thường của chế độ.
+
+- `prototype-fix` chỉ dùng cho dự án `SRS_MODE: registry`.
 
 ## Dữ liệu trong `PROJECT_DIR`
 
@@ -106,4 +108,19 @@ Tham số nhận được: $ARGUMENTS
    - Đăng nhập giả + chọn vai trò, đổi vai trò nhanh, ẩn / hiện theo `data-permission`, trang "Không có quyền truy cập", chuyển trạng thái chứng từ qua `Workflow`: theo mục 7 của prototype-guide.
    - Thứ tự: `components.js` → `components.html` → `layout.js` → mock data + `app.js` → `index.html` → từng màn hình → `README.md`.
    - Màn hình chỉ ghép từ component; không hardcode màu / cỡ chữ / khoảng cách.
+   - **Không viết `HANDOFF.md`** — tool sinh sau khi QA. Sau khi dựng xong, tool tự chạy QA (Playwright).
 3. **`SRS_MODE: legacy`:** làm theo [references/prototype-guide-legacy.md](references/prototype-guide-legacy.md): đọc `srs/README.md` và toàn bộ `srs/09-ui-ux/` (mở `05-functional/<module>.md` chỉ khi cần luồng); thứ tự `assets/js/mock-data.js` → `assets/js/layout.js` → `assets/js/app.js` → từng trang HTML → `README.md`.
+
+### `prototype-fix` — sửa lỗi QA của prototype
+1. **Bắt buộc gọi skill `design-taste-frontend`** trước khi sửa giao diện.
+2. Đọc `TARGET_DIR/_qa/report.json` (danh sách `issues`: mức, nhóm, trang, kích thước màn hình, mô tả) và [references/prototype-guide.md](references/prototype-guide.md).
+3. Sửa theo thứ tự mức: `critical` → `major` → `minor`. Cách xử lý từng nhóm:
+   - *Lỗi JavaScript / console*, *Không tải được file*: sửa script / đường dẫn tương đối; kiểm thứ tự nạp script (prototype-guide mục 3).
+   - *Link hỏng*: trỏ đúng `APP_META.screens[].path` hoặc tạo trang còn thiếu.
+   - *Tràn ngang* (ở kích thước ghi trong lỗi): bọc bảng trong vùng cuộn ngang / chuyển thành thẻ dưới `md`, `min-w-0` cho cột flex, xuống dòng cho chuỗi dài.
+   - *Phân quyền*, *Đăng nhập / vai trò*: menu lọc bằng `Perm.canOpen`, trang gọi `Perm.guard()` → `UI.noPermission()`; trang đăng nhập liệt kê đủ vai trò.
+   - *Thiếu màn hình*: dựng trang theo `srs/09-ui-ux/screens/<slug>.md`, đúng đường dẫn trong lỗi.
+   - *Hardcode*: thay bằng class token / CSS variable.
+   - *Truy vết*: sửa `body[data-screen]`.
+4. Không sửa file tool sinh (`tailwind.tokens.js`, `tokens.css`, `icons.js`, `permissions.js`, `workflows.js`, `demo-store.js`, `HANDOFF.md`, `_qa*`). Lỗi do SRS (ví dụ phân quyền sai trong SRS) → không sửa prototype để "lách", ghi lại trong câu trả lời cuối.
+5. Sửa trong `TARGET_DIR`; tool tự chạy lại QA sau khi bạn xong.

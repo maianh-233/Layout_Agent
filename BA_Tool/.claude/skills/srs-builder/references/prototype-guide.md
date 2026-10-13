@@ -35,7 +35,8 @@ Dự án cũ (`SRS_MODE: legacy`) dùng [prototype-guide-legacy.md](prototype-gu
 │   ├── js/layout.js           # Khung ứng dụng: sidebar, topbar, breadcrumb, dải "Bản demo"
 │   ├── js/mock-data/<module>.js
 │   └── js/app.js              # Khởi động trang, trạng thái demo dùng chung
-├── HANDOFF.md
+├── HANDOFF.md                 # (tool sinh sau QA — không viết)
+├── _qa-report.md, _qa/        # (tool sinh — báo cáo QA + ảnh chụp)
 └── README.md
 ```
 
@@ -87,7 +88,9 @@ Website / thương mại điện tử: trang ở `pages/<slug>.html`, `index.htm
 4. **`assets/js/layout.js`** — `AppShell` theo menu 9.6 (sidebar thu gọn được + drawer trên mobile, topbar, breadcrumb, `RoleSwitcher`, `UserMenu`, `DemoBanner` "Bản demo — dữ liệu giả").
 5. **`assets/js/mock-data/<module>.js`** + **`assets/js/app.js`** (mục 7).
 6. **`index.html`** (đăng nhập giả + chọn vai trò, mục 7.1), rồi **từng màn hình** theo thứ tự module trong 03-screen-inventory.
-7. **`README.md`** (danh sách trang: `File | Mã SCR | Tên | Vai trò`; cách chạy; giới hạn của bản demo).
+7. **`README.md`** (danh sách trang: `File | Mã SCR | Tên | Vai trò`; cách chạy; giới hạn của bản demo). `HANDOFF.md` do tool sinh, không viết.
+
+Sau khi bạn xong, tool chạy QA bằng Playwright (mở mọi trang ở 375 / 768 / 1440px qua `file://`, bắt lỗi console, file không tải được, link hỏng, tràn ngang, `data-screen` sai, đăng nhập từng vai trò để kiểm menu và trang "Không có quyền truy cập"). Menu sidebar phải là thẻ `<a href>` nằm trong `<aside>` / `<nav>` để QA đọc được.
 
 ## 5. `components.js` — API thư viện
 

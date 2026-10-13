@@ -50,7 +50,9 @@ export type JobKind =
   | 'ui-srs'
   | 'srs-review'
   | 'srs-fix'
-  | 'prototype';
+  | 'prototype'
+  | 'prototype-qa'
+  | 'prototype-fix';
 
 export interface PhaseState {
   questions: QuestionSet | null;
@@ -76,6 +78,7 @@ export interface Project {
   review?: { createdAt: string; critical: number; major: number; minor: number; aiStatus: 'done' | 'failed' | 'skipped' };
   pendingFix?: { findingId: string; createdAt: string } | null;
   versions?: VersionInfo[];
+  qa?: { createdAt: string; critical: number; major: number; minor: number; screenshots: number; error?: string };
   prototype: { dir: string | null; builtAt: string | null; pages: string[] };
   job: {
     id: string;
@@ -117,6 +120,23 @@ export interface FileDiff {
   patch: string;
   added: number;
   removed: number;
+}
+
+export interface QaIssue {
+  id: string;
+  severity: Severity;
+  category: string;
+  message: string;
+  page?: string;
+  viewport?: string;
+}
+
+export interface QaReport {
+  createdAt: string;
+  pages: string[];
+  screenshots: { page: string; viewport: 'mobile' | 'tablet' | 'desktop'; file: string }[];
+  roles: { role: string; name: string; home: string | null; menu: string[]; forbiddenInMenu: string[]; noPermissionPage: { path: string; ok: boolean } | null }[];
+  issues: QaIssue[];
 }
 
 export interface VersionInfo {

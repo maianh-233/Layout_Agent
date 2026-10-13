@@ -27,6 +27,7 @@ import { REVIEW_AI, buildReview, codeReview, readAiReview, readReview, reviewSum
 import { diffDirs, listAll } from './versions.js';
 import { listPages, scanHardcoded, writeFoundation } from './prototype-assets.js';
 import { writeRuntime } from './prototype-runtime.js';
+import { qaSummary, runQa } from './qa.js';
 
 export type JobEvent =
   | AgentEvent
@@ -249,7 +250,42 @@ async function runJob(job: Job, params: JobParams) {
     emit(job, { type: 'step', text: `Rà soát xong: ${sum.critical} nghiêm trọng, ${sum.major} cần sửa, ${sum.minor} gợi ý${ai.ok ? '' : ' (lượt AI chưa chạy được)'}.` });
   };
 
+  /** QA prototype bằng Playwright (không dùng AI) + HANDOFF.md. failSoft: lỗi QA không làm hỏng tác vụ dựng. */
+  const runQaStep = async ({ failSoft }: { failSoft: boolean }) => {
+    const target = params.targetDir!;
+    emit(job, { type: 'step', text: 'QA tự động: mở từng trang ở 375 / 768 / 1440px, kiểm lỗi, đăng nhập từng vai trò…' });
+    try {
+      const report = await runQa({
+        target,
+        srs: srsDir(job.slug),
+        appName: loaded.name,
+        onProgress: (text) => emit(job, { type: 'step', text }),
+      });
+      const sum = qaSummary(report);
+      await updateProject(job.slug, (pr) => void (pr.qa = sum));
+      emit(job, { type: 'step', text: `QA xong: ${sum.critical} nghiêm trọng, ${sum.major} cần sửa, ${sum.minor} gợi ý · ${sum.screenshots} ảnh chụp · đã cập nhật HANDOFF.md.` });
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e);
+      if (!failSoft) throw e;
+      await updateProject(job.slug, (pr) => void (pr.qa = { createdAt: new Date().toISOString(), critical: 0, major: 0, minor: 0, screenshots: 0, error: message }));
+      emit(job, { type: 'step', text: `QA chưa chạy được: ${message}` });
+    }
+  };
+
   switch (job.kind) {
+    case 'prototype-qa':
+      await runQaStep({ failSoft: false });
+      return;
+
+    case 'prototype-fix': {
+      emit(job, { type: 'step', text: 'AI đang sửa các lỗi trong báo cáo QA…' });
+      await run();
+      const pages = await listPages(params.targetDir!);
+      await updateProject(job.slug, (pr) => void (pr.prototype = { ...pr.prototype, builtAt: new Date().toISOString(), pages }));
+      await runQaStep({ failSoft: false });
+      return;
+    }
+
     case 'srs-review':
       await runReview({ failSoft: false });
       return;
@@ -387,7 +423,8 @@ ${JSON.stringify(finding, null, 2)}`, draft);
         pr.prototype = { dir: target, builtAt: new Date().toISOString(), pages };
         pr.screen = 'done';
       });
-      emit(job, { type: 'step', text: `Hoàn tất: ${pages.length} trang.` });
+      emit(job, { type: 'step', text: `Đã dựng ${pages.length} trang.` });
+      if (srsMode === 'registry') await runQaStep({ failSoft: true });
       return;
     }
   }

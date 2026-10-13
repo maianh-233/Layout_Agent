@@ -52,6 +52,8 @@ const MAX_TURNS: Record<JobKind, number> = {
   'ui-followup': 30,
   'srs-review': 80,
   'srs-fix': 60,
+  'prototype-qa': 1,
+  'prototype-fix': 200,
   'ui-questions': 30,
   'business-srs': 250,
   'ui-srs': 350,
@@ -65,11 +67,16 @@ const LARGE_MAX_TURNS: Record<JobKind, number> = {
   'ui-followup': 40,
   'srs-review': 150,
   'srs-fix': 100,
+  'prototype-qa': 1,
+  'prototype-fix': 400,
   'ui-questions': 50,
   'business-srs': 450,
   'ui-srs': 700,
   prototype: 900,
 };
+
+/** Dựng / sửa giao diện prototype: bắt buộc dùng taste skill. */
+const usesTaste = (mode: JobKind) => mode === 'prototype' || mode === 'prototype-fix';
 
 /** Lỗi của tác vụ AI, kèm mã để giao diện xử lý riêng (ví dụ chạm giới hạn sử dụng). */
 export class AgentError extends Error {
@@ -137,7 +144,7 @@ export async function runSkill(opts: RunOptions): Promise<void> {
         cwd: ROOT_DIR,
         model: MODEL,
         settingSources: ['user', 'project'],
-        skills: mode === 'prototype' ? ['srs-builder', TASTE_SKILL] : ['srs-builder'],
+        skills: usesTaste(mode) ? ['srs-builder', TASTE_SKILL] : ['srs-builder'],
         tools: ['Read', 'Write', 'Edit', 'Glob', 'Grep', 'Skill', 'TodoWrite'],
         additionalDirectories: targetDir ? [targetDir] : [],
         permissionMode: 'default',
@@ -155,7 +162,7 @@ export async function runSkill(opts: RunOptions): Promise<void> {
           abort.abort();
           throw new AgentError('Không nạp được skill srs-builder (.claude/skills/srs-builder).');
         }
-        if (mode === 'prototype' && !skills.includes(TASTE_SKILL)) {
+        if (usesTaste(mode) && !skills.includes(TASTE_SKILL)) {
           abort.abort();
           throw new AgentError(`Không tìm thấy skill "${TASTE_SKILL}" (taste skill) trong hệ thống. Kiểm tra ~/.claude/skills.`);
         }

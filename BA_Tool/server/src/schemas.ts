@@ -160,6 +160,8 @@ export const JOB_KINDS = [
   'srs-review',
   'srs-fix',
   'prototype',
+  'prototype-qa',
+  'prototype-fix',
 ] as const;
 export type JobKind = (typeof JOB_KINDS)[number];
 
@@ -194,6 +196,8 @@ export interface Project {
   pendingFix?: { findingId: string; createdAt: string } | null;
   /** Các phiên bản đã chốt (bản chụp ở srs/_versions/<id>/) */
   versions?: { id: string; createdAt: string; note: string }[];
+  /** Tóm tắt QA prototype gần nhất (chi tiết ở <prototype>/_qa/report.json) */
+  qa?: { createdAt: string; critical: number; major: number; minor: number; screenshots: number; error?: string };
   prototype: { dir: string | null; builtAt: string | null; pages: string[] };
   /** Tác vụ AI đang chạy hoặc vừa kết thúc */
   job: {

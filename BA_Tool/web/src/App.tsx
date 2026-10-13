@@ -23,6 +23,8 @@ const JOB_TITLES: Record<JobKind, string> = {
   'ui-srs': 'AI đang bổ sung SRS giao diện',
   'srs-review': 'Đang rà soát chất lượng SRS',
   'srs-fix': 'AI đang sửa lỗi trên bản nháp',
+  'prototype-qa': 'Đang kiểm thử prototype (Playwright)',
+  'prototype-fix': 'AI đang sửa lỗi QA của prototype',
   prototype: 'AI đang dựng prototype',
 };
 
@@ -209,6 +211,7 @@ function ProjectView({ slug, onHome }: { slug: string; onHome: () => void }) {
             error=""
             onClearError={() => setJobError('')}
             onBuild={(dir) => startJob('prototype', { targetDir: dir })}
+            onStartJob={(kind) => startJob(kind)}
           />
         );
         break;

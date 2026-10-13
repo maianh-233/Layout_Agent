@@ -25,6 +25,7 @@ import { checkRegistry, writeGenerated } from './registry.js';
 import { checkDesignTokens } from './design.js';
 import { buildReview, codeReview, readReview, reviewSummary, writeReview } from './review.js';
 import { diffDirs, isClientFile, listAll, listVersions, lockVersion, versionRoot } from './versions.js';
+import { QA_JSON } from './qa.js';
 import { JOB_KINDS, PROJECT_TYPES, SaveAnswersSchema, type Screen } from './schemas.js';
 
 const app = express();
@@ -121,6 +122,12 @@ app.post('/api/projects/:slug/jobs', h(async (req, res) => {
       throw new HttpError(400, 'Chưa có SRS giao diện (09-ui-ux). Hãy hoàn tất bước Giao diện trước.');
     }
   }
+  if (body.kind === 'prototype-qa' || body.kind === 'prototype-fix') {
+    const p = await loadProject(slug);
+    if (!p.prototype.dir || !existsSync(p.prototype.dir)) throw new HttpError(400, 'Chưa có prototype. Hãy dựng prototype trước.');
+    if (!p.projectType) throw new HttpError(400, 'QA tự động chỉ áp dụng cho dự án tạo mới (có loại dự án).');
+    targetDir = p.prototype.dir;
+  }
   if (body.kind === 'srs-fix') {
     if (!body.findingId) throw new HttpError(400, 'Thiếu mã lỗi cần sửa');
     if ((await loadProject(slug)).pendingFix) throw new HttpError(409, 'Đang có một bản sửa chờ xem. Hãy lưu hoặc bỏ bản sửa đó trước.');
@@ -199,6 +206,14 @@ app.get('/api/projects/:slug/srs.zip', h(async (req, res) => {
   zip.pipe(res);
   zip.glob('**/*', { cwd: dir, ignore: ['_versions/**'] }, { prefix: 'srs' });
   await zip.finalize();
+}));
+
+// ---------- QA prototype ----------
+
+app.get('/api/projects/:slug/qa', h(async (req, res) => {
+  const p = await loadProject(param(req, 'slug'));
+  const file = p.prototype.dir ? path.join(p.prototype.dir, QA_JSON) : '';
+  res.json(file && existsSync(file) ? JSON.parse(await fs.readFile(file, 'utf8')) : null);
 }));
 
 // ---------- Rà soát SRS ----------
