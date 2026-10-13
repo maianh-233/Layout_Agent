@@ -26,6 +26,7 @@ import { checkDesignTokens } from './design.js';
 import { REVIEW_AI, buildReview, codeReview, readAiReview, readReview, reviewSummary, writeReview } from './review.js';
 import { diffDirs, listAll } from './versions.js';
 import { listPages, scanHardcoded, writeFoundation } from './prototype-assets.js';
+import { writeRuntime } from './prototype-runtime.js';
 
 export type JobEvent =
   | AgentEvent
@@ -349,10 +350,14 @@ ${JSON.stringify(finding, null, 2)}`, draft);
 
     case 'prototype': {
       const target = params.targetDir!;
+      let expectedScreens: { id: string; path: string }[] = [];
       if (srsMode === 'registry') {
         // Nền móng do code sinh từ SRS: tokens (Tailwind + CSS) và sprite icon — AI dựng phần còn lại trên đó
         const written = await writeFoundation(target, srsDir(job.slug));
         emit(job, { type: 'step', text: `Đã sinh từ design tokens: ${written.join(', ')}.` });
+        const runtime = await writeRuntime(target, srsDir(job.slug), loaded.name, job.slug);
+        expectedScreens = runtime.screens;
+        emit(job, { type: 'step', text: `Đã sinh từ phân quyền + vòng đời chứng từ: ${runtime.files.join(', ')}.` });
       }
       emit(job, { type: 'step', text: `Đang dựng prototype vào ${target}…` });
       await run();
@@ -360,6 +365,12 @@ ${JSON.stringify(finding, null, 2)}`, draft);
       if (!pages.includes('index.html')) throw new Error('AI chưa tạo index.html trong folder prototype. Hãy thử chạy lại.');
       if (srsMode === 'registry') {
         if (!pages.includes('components.html')) emit(job, { type: 'step', text: 'Cảnh báo: chưa có trang style guide components.html.' });
+        const missing = expectedScreens.filter((s) => !pages.includes(s.path));
+        if (missing.length)
+          emit(job, {
+            type: 'step',
+            text: `Cảnh báo: còn ${missing.length} màn hình trong SRS chưa có trang — ${missing.slice(0, 6).map((s) => `${s.id} (${s.path})`).join(', ')}${missing.length > 6 ? '…' : ''}.`,
+          });
         const hard = await scanHardcoded(target, pages);
         if (hard.length) {
           const total = hard.reduce((s, h) => s + h.count, 0);

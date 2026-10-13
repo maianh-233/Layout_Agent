@@ -28,6 +28,9 @@ Dự án cũ (`SRS_MODE: legacy`) dùng [prototype-guide-legacy.md](prototype-gu
 │   ├── js/tailwind.tokens.js  # (CÓ SẴN — tool sinh từ _design-tokens.json, không sửa)
 │   ├── css/tokens.css         # (CÓ SẴN — tool sinh, không sửa)
 │   ├── js/icons.js            # (CÓ SẴN — sprite icon, không sửa)
+│   ├── js/permissions.js      # (CÓ SẴN — vai trò, quyền, màn hình được vào: window.Perm, window.APP_META)
+│   ├── js/workflows.js        # (CÓ SẴN — vòng đời chứng từ: window.Workflow)
+│   ├── js/demo-store.js       # (CÓ SẴN — lưu thay đổi demo: window.DemoStore)
 │   ├── js/components.js       # Thư viện component (window.UI)
 │   ├── js/layout.js           # Khung ứng dụng: sidebar, topbar, breadcrumb, dải "Bản demo"
 │   ├── js/mock-data/<module>.js
@@ -54,7 +57,11 @@ Website / thương mại điện tử: trang ở `pages/<slug>.html`, `index.htm
 <body data-screen="SCR-SALES-001" data-module="SALES" class="bg-neutral-50 text-neutral-800">
   <div id="app"></div>
   <script src="../../assets/js/icons.js"></script>
+  <script src="../../assets/js/permissions.js"></script>
+  <script src="../../assets/js/workflows.js"></script>
+  <script src="../../assets/js/mock-data/master.js"></script>
   <script src="../../assets/js/mock-data/sales.js"></script>
+  <script src="../../assets/js/demo-store.js"></script>
   <script src="../../assets/js/components.js"></script>
   <script src="../../assets/js/layout.js"></script>
   <script src="../../assets/js/app.js"></script>
@@ -69,6 +76,8 @@ Website / thương mại điện tử: trang ở `pages/<slug>.html`, `index.htm
 - Đường dẫn tương đối theo độ sâu thư mục (`../../` cho `pages/<module>/`).
 - `data-screen` = mã SCR để truy vết; `data-module` = mã module.
 - Script riêng của trang ngắn: chỉ cấu hình component + dữ liệu.
+- Thứ tự script cố định: `icons` → `permissions` → `workflows` → `mock-data/*` → `demo-store` → `components` → `layout` → `app` → script trang.
+- **Đường dẫn mỗi màn hình lấy đúng `APP_META.screens[].path`** (đã đọc từ "File prototype" trong đặc tả). Liên kết giữa các trang dùng `Perm.url('pages/sales/orders.html')`.
 
 ## 4. Thứ tự dựng
 
@@ -76,8 +85,8 @@ Website / thương mại điện tử: trang ở `pages/<slug>.html`, `index.htm
 2. **`assets/js/components.js`** — thư viện component (mục 5).
 3. **`components.html`** — style guide (mục 6). Mở được độc lập, dùng chính `components.js`.
 4. **`assets/js/layout.js`** — `AppShell` theo menu 9.6 (sidebar thu gọn được + drawer trên mobile, topbar, breadcrumb, `RoleSwitcher`, `UserMenu`, `DemoBanner` "Bản demo — dữ liệu giả").
-5. **`assets/js/mock-data/<module>.js`** + **`assets/js/app.js`**.
-6. **`index.html`**, rồi **từng màn hình** theo thứ tự module trong 03-screen-inventory.
+5. **`assets/js/mock-data/<module>.js`** + **`assets/js/app.js`** (mục 7).
+6. **`index.html`** (đăng nhập giả + chọn vai trò, mục 7.1), rồi **từng màn hình** theo thứ tự module trong 03-screen-inventory.
 7. **`README.md`** (danh sách trang: `File | Mã SCR | Tên | Vai trò`; cách chạy; giới hạn của bản demo).
 
 ## 5. `components.js` — API thư viện
@@ -106,13 +115,43 @@ Trang dùng `AppShell` đơn giản với mục lục bên trái, gồm:
 4. **Badge trạng thái chứng từ:** mọi trạng thái của mọi `documents` trong registry với đúng tone.
 5. **Mẫu bố cục trang:** danh sách, chi tiết, form, dashboard — thu nhỏ, để frontend thấy cách ghép.
 
-## 7. Dữ liệu giả và xử lý giả
+## 7. Vai trò, dữ liệu giả và xử lý giả
 
-- Nội dung chân thực theo ngành, tiếng Việt, tiền VNĐ, tên người / địa chỉ Việt Nam. Danh sách chính 30–100 dòng để thấy phân trang.
-- Dữ liệu nằm trong biến toàn cục (`window.MOCK.sales = {...}`) — không `fetch`.
-- Trạng thái thay đổi (tạo, sửa, duyệt…) lưu `localStorage`, **luôn bọc try/catch** (fallback biến trong bộ nhớ).
-- Đủ trạng thái loading (skeleton ~400ms) / rỗng / lỗi / thành công như đặc tả; nút chưa mô phỏng → toast "Tính năng sẽ có ở bản chính thức".
+`permissions.js`, `workflows.js`, `demo-store.js` **do tool sinh từ SRS** — dùng API của chúng, không tự viết lại logic phân quyền / chuyển trạng thái.
+
+### 7.1. Đăng nhập giả và đổi vai trò (hệ thống quản trị)
+
+- `index.html`: màn hình đăng nhập theo đặc tả; dưới form có danh sách **chọn vai trò** từ `APP_META.roles` (thẻ: tên vai trò + người dùng demo + mô tả ngắn quyền). Chọn → `Perm.setRole(id)` → `location.href = Perm.home()` (màn hình mặc định của vai trò, đúng `defaultScreen`). Đã có vai trò thì hiện nút "Tiếp tục với <vai trò>".
+- `layout.js`:
+  - Đầu `Layout.mount`: `if (!Perm.guard())` → chưa có vai trò thì đã tự chuyển về `index.html`; có vai trò nhưng không được vào → render khung + `UI.noPermission()` (tiêu đề "Không có quyền truy cập", mô tả vai trò hiện tại, nút "Về trang của tôi" → `Perm.home()`).
+  - **Menu sidebar** chỉ hiện mục mà `Perm.canOpen(screenId)` đúng; nhóm menu rỗng thì ẩn.
+  - **Topbar** có `RoleSwitcher` (dropdown vai trò, hiển thị tên + người dùng demo): đổi → `Perm.setRole(id)`; nếu trang hiện tại không được vào → `location.href = Perm.home()`, ngược lại `location.reload()`. `UserMenu` có "Đặt lại dữ liệu demo" (`UI.confirm` → `DemoStore.reset()` → reload) và "Đăng xuất" (`Perm.logout()`).
+  - `DemoBanner` "Bản demo — dữ liệu giả" luôn hiện.
+- **Nút / cột / mục theo quyền:** gắn `data-permission="SALES.ORDER.APPROVE"` (mã quyền = `<resource>.<ACTION>` trong đặc tả màn hình). `Perm` tự gỡ phần tử không có quyền, kể cả phần tử render sau. Muốn hiện nhưng làm mờ: thêm `data-permission-mode="disable"`. Logic JS thì dùng `Perm.can(code)`.
+- **Phạm vi dữ liệu:** danh sách lọc theo `Perm.scope('SALES.ORDER')`: `own` → chỉ bản ghi có `ownerId` = người dùng demo của vai trò; `team` / `branch` → cùng `teamId` / `branchId`; `all` → tất cả. Ghi rõ phạm vi đang xem trên `PageHeader` (ví dụ "Đơn của tôi").
+
+### 7.2. Dữ liệu giả
+
+- `mock-data/master.js`: danh mục dùng chung — `MOCK.users` (**mỗi vai trò ít nhất 1 người dùng demo**: `{ id, name, roleId, teamId, branchId, email, phone }`), chi nhánh, khách hàng, nhà cung cấp, sản phẩm…
+- `mock-data/<module>.js`: chứng từ của module. Mỗi chứng từ có vòng đời: `{ id, code, state, history: [...], ownerId, ... }` — `code` đúng quy tắc đánh mã (`WORKFLOWS[docId].numbering`), `state` là mã trạng thái trong `WORKFLOWS`, `history` có các bước hợp lệ dẫn tới trạng thái hiện tại.
+- **Khớp giữa các module:** khóa ngoại trỏ tới bản ghi có thật (`customerId` ∈ `MOCK.customers`, dòng hàng `productId` ∈ `MOCK.products`; tổng tiền = Σ dòng hàng; tồn kho / công nợ khớp chứng từ đã duyệt theo `_integration.md`).
+- Đủ nhiều để thấy phân trang: 30–100 dòng cho danh sách chính; trạng thái chứng từ phân bố đều để thấy mọi badge.
+- Chân thực theo ngành, tiếng Việt, VNĐ, tên / địa chỉ Việt Nam; ngày trong 3 tháng gần nhất.
+- Trang đọc / ghi qua `DemoStore` (không sửa thẳng `MOCK`): `DemoStore.list('salesOrders')`, `DemoStore.update('salesOrders', id, patch)`, `DemoStore.insert(...)`.
+
+### 7.3. Xử lý giả theo vòng đời chứng từ
+
+- Badge: `const s = Workflow.state('DOC-SALES-ORDER', row.state)` → `UI.statusBadge(s.name, s.tone)`.
+- Nút thao tác trên trang chi tiết / dòng bảng: **chỉ từ** `Workflow.actions(docId, row.state)` (đã lọc theo vai trò + quyền). Mỗi nút: `UI.confirm` (với Từ chối / Hủy: bắt nhập lý do) → `const next = Workflow.apply(docId, row, t.event, { note })` → `DemoStore.update(name, row.id, next)` → toast thành công → render lại (badge đổi màu, nút đổi theo trạng thái mới, `UI.timeline` thêm dòng từ `history`, `UI.approvalFlow` cập nhật cấp duyệt).
+- Chuyển trạng thái có `condition` (ví dụ "Tổng tiền > 50 triệu"): trang tự kiểm điều kiện trên dữ liệu trước khi cho bấm; không đạt thì nút làm mờ kèm tooltip nêu điều kiện (đúng BR trong SRS).
+- Tạo chứng từ mới: `code = Workflow.nextCode(docId, codes hiện có)`, `state = Workflow.initial(docId)`, `history` có dòng "Tạo mới".
+- Tác động liên module khi chuyển trạng thái (theo `_integration.md`), ví dụ duyệt đơn bán → giảm tồn kho khả dụng: cập nhật bản ghi liên quan qua `DemoStore` và toast nêu rõ tác động.
+- Loading giả (skeleton ~400ms), trạng thái rỗng / lỗi / thành công đúng như đặc tả. Nút chưa mô phỏng → toast "Tính năng sẽ có ở bản chính thức".
 - Luôn có dải "Bản demo — dữ liệu giả".
+
+### 7.4. Website / thương mại điện tử
+
+Không có đăng nhập chọn vai trò trừ khi SRS có khu quản trị (khi đó khu quản trị theo 7.1, trang công khai không cần vai trò). Giỏ hàng, form, bộ lọc… vẫn lưu qua `DemoStore`.
 
 ## 8. Chất lượng
 
