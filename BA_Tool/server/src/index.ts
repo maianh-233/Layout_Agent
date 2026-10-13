@@ -20,7 +20,7 @@ import {
 } from './projects.js';
 import { attachClient, getJob, reconcileJob, retryLastJob, startJob } from './jobs.js';
 import { checkWritable, listDir, makeDir } from './fsbrowse.js';
-import { SaveAnswersSchema, type Screen } from './schemas.js';
+import { PROJECT_TYPES, SaveAnswersSchema, type Screen } from './schemas.js';
 
 const app = express();
 app.use(express.json({ limit: '5mb' }));
@@ -59,8 +59,13 @@ app.get('/api/projects', h(async (_req, res) => {
 }));
 
 app.post('/api/projects', h(async (req, res) => {
-  const { name } = z.object({ name: z.string().trim().min(1, 'Hãy nhập tên dự án').max(120) }).parse(req.body);
-  res.json(await createProject(name));
+  const { name, projectType } = z
+    .object({
+      name: z.string().trim().min(1, 'Hãy nhập tên dự án').max(120),
+      projectType: z.enum(PROJECT_TYPES, { message: 'Hãy chọn loại dự án' }),
+    })
+    .parse(req.body);
+  res.json(await createProject(name, projectType));
 }));
 
 app.get('/api/projects/:slug', h(async (req, res) => {

@@ -17,7 +17,7 @@ import {
   writeAnswersFile,
   writeRequestFile,
 } from './projects.js';
-import { QuestionSetSchema, type JobKind, type Phase, type Project } from './schemas.js';
+import { QuestionSetSchema, projectTypeOf, type JobKind, type Phase, type Project } from './schemas.js';
 
 export type JobEvent =
   | AgentEvent
@@ -126,6 +126,7 @@ function closeClients(job: Job) {
 
 async function runJob(job: Job, params: { targetDir?: string }) {
   const dir = projectDir(job.slug);
+  const projectType = projectTypeOf(await loadProject(job.slug));
   const relFile = (f: string) => {
     const base = params.targetDir && path.resolve(f).toLowerCase().startsWith(path.resolve(params.targetDir).toLowerCase())
       ? params.targetDir
@@ -134,7 +135,7 @@ async function runJob(job: Job, params: { targetDir?: string }) {
   };
   const onEvent = (e: AgentEvent) => emit(job, e.type === 'file' ? { ...e, path: relFile(e.path) } : e);
   const run = (extra?: string) =>
-    runSkill({ mode: job.kind, projectDir: dir, targetDir: params.targetDir, extra, onEvent, signal: job.abort.signal });
+    runSkill({ mode: job.kind, projectType, projectDir: dir, targetDir: params.targetDir, extra, onEvent, signal: job.abort.signal });
 
   switch (job.kind) {
     case 'business-questions':

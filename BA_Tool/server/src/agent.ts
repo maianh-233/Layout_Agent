@@ -4,7 +4,7 @@
 import path from 'node:path';
 import { query, type CanUseTool } from '@anthropic-ai/claude-agent-sdk';
 import { MODEL, ROOT_DIR, TASTE_SKILL } from './config.js';
-import type { JobKind } from './schemas.js';
+import { isLargeSystem, type JobKind, type ProjectType } from './schemas.js';
 
 export type AgentEvent =
   | { type: 'log'; text: string }
@@ -12,6 +12,7 @@ export type AgentEvent =
 
 export interface RunOptions {
   mode: JobKind;
+  projectType: ProjectType;
   projectDir: string;
   targetDir?: string;
   /** Ghi chú thêm vào cuối prompt, ví dụ lỗi JSON của lần chạy trước */
@@ -49,6 +50,15 @@ const MAX_TURNS: Record<JobKind, number> = {
   'business-srs': 250,
   'ui-srs': 250,
   prototype: 400,
+};
+
+/** CRM/ERP: nhiều module, nhiều màn hình hơn — vẫn chạy một lượt nên nới số bước. */
+const LARGE_MAX_TURNS: Record<JobKind, number> = {
+  'business-questions': 60,
+  'ui-questions': 50,
+  'business-srs': 600,
+  'ui-srs': 500,
+  prototype: 900,
 };
 
 /** Lỗi của tác vụ AI, kèm mã để giao diện xử lý riêng (ví dụ chạm giới hạn sử dụng). */
@@ -95,8 +105,8 @@ function explainError(code: string | undefined, fallback: string): AgentError {
 const looksLikeUsageLimit = (text: string) => /usage limit|limit reached|rate.?limit|hit your limit|quota/i.test(text);
 
 export async function runSkill(opts: RunOptions): Promise<void> {
-  const { mode, projectDir, targetDir, onEvent } = opts;
-  const lines = [`/srs-builder MODE: ${mode}`, `PROJECT_DIR: ${projectDir}`];
+  const { mode, projectType, projectDir, targetDir, onEvent } = opts;
+  const lines = [`/srs-builder MODE: ${mode}`, `PROJECT_TYPE: ${projectType}`, `PROJECT_DIR: ${projectDir}`];
   if (targetDir) lines.push(`TARGET_DIR: ${targetDir}`);
   if (opts.extra) lines.push('', opts.extra);
 
@@ -122,7 +132,7 @@ export async function runSkill(opts: RunOptions): Promise<void> {
         additionalDirectories: targetDir ? [targetDir] : [],
         permissionMode: 'default',
         canUseTool: makePermission(allowedRoots),
-        maxTurns: MAX_TURNS[mode],
+        maxTurns: (isLargeSystem(projectType) ? LARGE_MAX_TURNS : MAX_TURNS)[mode],
         abortController: abort,
         env: { ...process.env, CLAUDE_AGENT_SDK_CLIENT_APP: 'ba-tool/1.0.0' },
       },

@@ -9,6 +9,7 @@ Skill được backend gọi bằng `/srs-builder` kèm các tham số dạng `K
 
 ```
 MODE: <business-questions | business-srs | ui-questions | ui-srs | prototype>
+PROJECT_TYPE: <website | ecommerce | crm | erp | management-generic>
 PROJECT_DIR: <đường dẫn tuyệt đối tới workspace/<slug>>
 TARGET_DIR: <chỉ có ở MODE prototype — folder đích>
 ```
@@ -23,6 +24,7 @@ Tham số nhận được: $ARGUMENTS
 - Chỉ ghi file vào `PROJECT_DIR` (và `TARGET_DIR` ở chế độ prototype). Không xóa file nào.
 - Không hỏi lại người dùng: tool chạy không tương tác. Thiếu thông tin thì ghi `[CẦN XÁC NHẬN]` theo hướng dẫn viết SRS.
 - Khi xong, trả lời một dòng ngắn tóm tắt những gì đã tạo.
+- **File domain** `references/domains/<PROJECT_TYPE>.md` (thiếu `PROJECT_TYPE` thì coi là `website`) chỉ để **gợi ý câu hỏi cho đủ ý**. Không lấy nội dung từ file domain đưa vào SRS như yêu cầu đã chốt — xem quy tắc trong [references/domains/README.md](references/domains/README.md).
 
 ## Dữ liệu trong `PROJECT_DIR`
 
@@ -37,11 +39,11 @@ Tham số nhận được: $ARGUMENTS
 
 ### `business-questions`
 1. Đọc `PROJECT_DIR/request.md`.
-2. Đọc [references/question-guide.md](references/question-guide.md).
-3. Ghi bộ câu hỏi nghiệp vụ (20–35 câu) ra `PROJECT_DIR/questions-business.json` đúng định dạng JSON trong question-guide. Chỉ ghi file này.
+2. Đọc [references/question-guide.md](references/question-guide.md) và [references/domains/README.md](references/domains/README.md), rồi đọc **đúng một** file `references/domains/<PROJECT_TYPE>.md`.
+3. Ghi bộ câu hỏi nghiệp vụ ra `PROJECT_DIR/questions-business.json` đúng định dạng JSON trong question-guide, **số câu theo file domain**. Dùng mục 1–4 của file domain làm danh sách kiểm tra để không sót chủ đề. Chỉ ghi file này.
 
 ### `business-srs`
-1. Đọc `request.md`, `answers-business.md`.
+1. Đọc `request.md`, `answers-business.md`. Có thể đọc `references/domains/<PROJECT_TYPE>.md` **chỉ để phát hiện chủ đề khách chưa trả lời** → ghi vào 13.9 (hoặc `[ĐỀ XUẤT]`). Module khách không xác nhận thì không đưa vào SRS.
 2. Đọc [references/srs-structure.md](references/srs-structure.md) và [references/srs-writing-guide.md](references/srs-writing-guide.md).
 3. Với mỗi file cần tạo, đọc mẫu cùng tên trong [templates/](templates/) rồi ghi vào `PROJECT_DIR/srs/`. Mỗi module dùng mẫu `templates/05-functional/module.md`.
 4. Tạo Phần 0–8 và 10–13. Phần 9: chỉ tạo `09-ui-ux/README.md` với nội dung mẫu `templates/09-ui-ux/README-placeholder.md`.
@@ -50,7 +52,7 @@ Tham số nhận được: $ARGUMENTS
 ### `ui-questions`
 1. Chỉ đọc: `srs/README.md`, `srs/01-introduction.md`, `srs/02-overall-description.md`, `srs/04-user-requirements.md`, `srs/05-functional/README.md`.
 2. Đọc [references/question-guide.md](references/question-guide.md).
-3. Ghi 12–20 câu hỏi giao diện ra `PROJECT_DIR/questions-ui.json`. Không hỏi lại điều SRS đã có.
+3. Ghi câu hỏi giao diện ra `PROJECT_DIR/questions-ui.json`, số câu theo dòng "Số câu hỏi giao diện" trong `references/domains/<PROJECT_TYPE>.md` (chỉ đọc dòng đầu file đó). Không hỏi lại điều SRS đã có.
 
 ### `ui-srs`
 1. Đọc `answers-ui.md`, `srs/README.md`, [references/srs-writing-guide.md](references/srs-writing-guide.md), mục Phần 9 trong [references/srs-structure.md](references/srs-structure.md), các mẫu trong `templates/09-ui-ux/`.

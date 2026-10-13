@@ -3,7 +3,7 @@ import fs from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { WORKSPACE_DIR } from './config.js';
-import type { Answer, Phase, Project, QuestionSet } from './schemas.js';
+import { PROJECT_TYPE_LABELS, projectTypeOf, type Answer, type Phase, type Project, type ProjectType, type QuestionSet } from './schemas.js';
 
 export class HttpError extends Error {
   constructor(public status: number, message: string) {
@@ -72,7 +72,7 @@ export async function updateProject(slug: string, fn: (p: Project) => void | Pro
   return saveProject(p);
 }
 
-export async function createProject(name: string): Promise<Project> {
+export async function createProject(name: string, projectType: ProjectType): Promise<Project> {
   await fs.mkdir(WORKSPACE_DIR, { recursive: true });
   const base = slugify(name);
   let slug = base;
@@ -82,6 +82,7 @@ export async function createProject(name: string): Promise<Project> {
   const p: Project = {
     slug,
     name: name.trim(),
+    projectType,
     createdAt: now,
     updatedAt: now,
     screen: 'request',
@@ -97,7 +98,12 @@ export async function createProject(name: string): Promise<Project> {
 
 /** Ghi yêu cầu ban đầu ra request.md để skill đọc. */
 export async function writeRequestFile(p: Project) {
-  await fs.writeFile(path.join(projectDir(p.slug), 'request.md'), `# Yêu cầu ban đầu của BA\n\n${p.request}\n`, 'utf8');
+  const type = projectTypeOf(p);
+  await fs.writeFile(
+    path.join(projectDir(p.slug), 'request.md'),
+    `# Yêu cầu ban đầu của BA\n\nLoại dự án: ${PROJECT_TYPE_LABELS[type]} (\`${type}\`)\n\n${p.request}\n`,
+    'utf8',
+  );
 }
 
 function formatAnswer(a: Answer | undefined): string {

@@ -2,7 +2,15 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api';
 import { ErrorBanner } from '../components/ConfirmDialog';
-import { SCREEN_LABELS, STEP_LABELS, stepOf, type Project } from '../types';
+import {
+  PROJECT_TYPE_OPTIONS,
+  SCREEN_LABELS,
+  STEP_LABELS,
+  projectTypeLabel,
+  stepOf,
+  type Project,
+  type ProjectType,
+} from '../types';
 
 const fmtDate = (iso: string) =>
   new Date(iso).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
@@ -12,15 +20,17 @@ export function ProjectList({ onOpen }: { onOpen: (slug: string) => void }) {
   const [error, setError] = useState('');
   const [creating, setCreating] = useState(false);
   const [name, setName] = useState('');
+  const [type, setType] = useState<ProjectType | null>(null);
   const [busy, setBusy] = useState(false);
 
   const load = () => api.listProjects().then(setProjects).catch((e: Error) => setError(e.message));
   useEffect(() => void load(), []);
 
   const create = async () => {
+    if (!type) return;
     setBusy(true);
     try {
-      const p = await api.createProject(name);
+      const p = await api.createProject(name, type);
       onOpen(p.slug);
     } catch (e) {
       setError((e as Error).message);
@@ -49,29 +59,60 @@ export function ProjectList({ onOpen }: { onOpen: (slug: string) => void }) {
 
       {creating && (
         <form
-          className="mt-6 flex flex-wrap gap-3 rounded-2xl border border-brand/30 bg-brand-soft/40 p-4"
+          className="mt-6 space-y-4 rounded-2xl border border-brand/30 bg-brand-soft/40 p-4"
           onSubmit={(e) => {
             e.preventDefault();
-            if (name.trim()) void create();
+            if (name.trim() && type) void create();
           }}
         >
-          <label className="sr-only" htmlFor="pname">
-            Tên dự án
-          </label>
-          <input
-            id="pname"
-            autoFocus
-            className="input min-w-0 flex-1"
-            placeholder="Tên dự án, ví dụ: Website shop thời trang Linh Anh"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
-          <button className="btn-primary" disabled={!name.trim() || busy}>
-            {busy ? 'Đang tạo…' : 'Tạo'}
-          </button>
-          <button type="button" className="btn-ghost" onClick={() => setCreating(false)}>
-            Hủy
-          </button>
+          <div>
+            <label className="mb-1 block text-sm font-medium" htmlFor="pname">
+              Tên dự án
+            </label>
+            <input
+              id="pname"
+              autoFocus
+              className="input"
+              placeholder="Ví dụ: Website shop thời trang Linh Anh, ERP Công ty VLXD Hòa Phát"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+          </div>
+          <fieldset>
+            <legend className="mb-1 text-sm font-medium">Loại dự án</legend>
+            <p className="mb-2 text-xs text-muted">Quyết định số lượng và chủ đề câu hỏi nghiệp vụ. Không đổi được sau khi tạo.</p>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {PROJECT_TYPE_OPTIONS.map((o) => (
+                <label
+                  key={o.value}
+                  className={[
+                    'flex cursor-pointer items-start gap-3 rounded-xl border bg-white px-4 py-3 transition',
+                    type === o.value ? 'border-brand ring-1 ring-brand' : 'border-line hover:border-stone-300',
+                  ].join(' ')}
+                >
+                  <input
+                    type="radio"
+                    name="ptype"
+                    className="mt-1 size-4 accent-brand"
+                    checked={type === o.value}
+                    onChange={() => setType(o.value)}
+                  />
+                  <span>
+                    <span className="block text-sm font-medium">{o.label}</span>
+                    <span className="block text-xs text-muted">{o.hint}</span>
+                  </span>
+                </label>
+              ))}
+            </div>
+          </fieldset>
+          <div className="flex gap-3">
+            <button className="btn-primary" disabled={!name.trim() || !type || busy}>
+              {busy ? 'Đang tạo…' : 'Tạo dự án'}
+            </button>
+            <button type="button" className="btn-ghost" onClick={() => setCreating(false)}>
+              Hủy
+            </button>
+          </div>
         </form>
       )}
 
@@ -92,7 +133,7 @@ export function ProjectList({ onOpen }: { onOpen: (slug: string) => void }) {
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-semibold">{p.name}</p>
                     <p className="mt-0.5 text-sm text-muted">
-                      Tạo lúc {fmtDate(p.createdAt)} · Cập nhật {fmtDate(p.updatedAt)}
+                      <span className="font-medium text-stone-600">{projectTypeLabel(p.projectType)}</span> · Tạo lúc {fmtDate(p.createdAt)} · Cập nhật {fmtDate(p.updatedAt)}
                     </p>
                   </div>
                   <div className="text-sm">

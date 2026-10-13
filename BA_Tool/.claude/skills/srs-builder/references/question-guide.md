@@ -12,7 +12,17 @@ BA sẽ đọc **nguyên văn** từng câu cho khách hàng nghe. Khách thư�
 4. **Mỗi câu có gợi ý / ví dụ trả lời** trong `hint`, để khách dễ hình dung.
 5. **Sắp xếp theo nhóm chủ đề, từ tổng quát đến chi tiết.**
 6. **Gắn mỗi câu với mục SRS mà nó phục vụ** trong `srsSections` (ví dụ `"1.2"`, `"3.5"`, `"9.3"`), theo số mục trong [srs-structure.md](srs-structure.md).
-7. **Số lượng:** nghiệp vụ 20–35 câu; giao diện 12–20 câu.
+7. **Số lượng theo loại dự án** (ghi ở đầu file domain):
+
+   | Loại | Nghiệp vụ | Giao diện |
+   |---|---|---|
+   | `website` | 20–35 | 12–20 |
+   | `ecommerce` | 35–55 | 15–25 |
+   | `crm` | 50–80 | 18–30 |
+   | `erp` | 70–120 | 20–35 |
+   | `management-generic` | 45–80 | 18–30 |
+
+   Hỏi đủ để nắm chắc nghiệp vụ; không thêm câu chỉ để đủ số.
 8. Xưng hô lịch sự, trung tính theo yêu cầu ban đầu (nếu yêu cầu nói "chủ cửa hàng" là nữ/nam thì dùng "chị"/"anh"; không rõ thì dùng "anh/chị").
 9. Không hỏi điều yêu cầu ban đầu hoặc SRS đã trả lời rõ.
 
@@ -27,7 +37,20 @@ BA sẽ đọc **nguyên văn** từng câu cho khách hàng nghe. Khách thư�
 - **Không** thêm phương án "Khác" vào `options`. Tool tự thêm "Khác" kèm ô nhập cho mọi câu `single`/`multi`.
 - Phương án viết ngắn, đời thường.
 
-## Nhóm gợi ý — câu hỏi nghiệp vụ
+## Nhóm gợi ý — câu hỏi nghiệp vụ cho CRM / ERP / hệ thống quản lý
+
+Thứ tự nhóm bắt buộc:
+1. **Tổng quan:** doanh nghiệp, quy mô, chi nhánh, mục tiêu, phần mềm đang dùng, vấn đề đang gặp (1.x, 2.x, 3.1–3.3).
+2. **Người dùng & vai trò:** ai dùng, làm gì, xem được dữ liệu đến đâu (2.5, 2.6, 4.2).
+3. **Phạm vi module:** một câu `multi` liệt kê các module trong file domain bằng lời đời thường để khách chọn những phần cần có (1.5, 5.x).
+4. **Một nhóm cho mỗi module** (theo thứ tự luồng nghiệp vụ, ví dụ Mua hàng → Kho → Bán hàng → Công nợ): luồng từng bước, chứng từ và trạng thái, ai duyệt và điều kiện duyệt, quy tắc tính toán, ngoại lệ (3.4, 3.5, 5.x, 7.x).
+5. **Liên kết giữa các module:** chứng từ này sinh ra chứng từ nào, tồn kho / công nợ thay đổi lúc nào (3.4, 5.x).
+6. **Báo cáo & dashboard:** báo cáo nào, chỉ số nào, ai xem (5.x, 3.7).
+7. **Quy tắc chung:** đánh mã chứng từ, tiền tệ, làm tròn, import/export Excel, in ấn, lịch sử thay đổi (3.5, 7.x, 8.x).
+8. **Tích hợp & dữ liệu cũ** (8.3, 8.7, 7.x).
+9. **Yêu cầu phi chức năng:** số người dùng, thiết bị, bảo mật, sao lưu (6.x).
+
+## Nhóm gợi ý — câu hỏi nghiệp vụ cho website / thương mại điện tử
 
 Điều chỉnh theo ngành, bỏ nhóm không liên quan:
 1. Về doanh nghiệp/cửa hàng và mục tiêu của trang web (1.2, 1.3, 3.1, 3.2)

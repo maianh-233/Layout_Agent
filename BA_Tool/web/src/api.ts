@@ -1,5 +1,5 @@
 // Gọi API backend. Mọi lỗi được chuyển thành Error có thông báo tiếng Việt.
-import type { Answer, AuthStatus, DirListing, JobKind, Phase, Project, Screen, SrsFileInfo } from './types';
+import type { Answer, AuthStatus, DirListing, JobKind, Phase, Project, ProjectType, Screen, SrsFileInfo } from './types';
 
 async function call<T>(url: string, init?: RequestInit): Promise<T> {
   let res: Response;
@@ -23,7 +23,8 @@ export const api = {
   recheckAuth: () => call<AuthStatus>('/api/auth-status/recheck', { method: 'POST' }),
   retryJob: (slug: string) => call<{ jobId: string }>(`/api/projects/${slug}/jobs/retry`, { method: 'POST' }),
   listProjects: () => call<Project[]>('/api/projects'),
-  createProject: (name: string) => call<Project>('/api/projects', json('POST', { name })),
+  createProject: (name: string, projectType: ProjectType) =>
+    call<Project>('/api/projects', json('POST', { name, projectType })),
   getProject: (slug: string) => call<Project>(`/api/projects/${slug}`),
   setScreen: (slug: string, screen: Screen) => call<Project>(`/api/projects/${slug}/screen`, json('POST', { screen })),
   submitRequest: (slug: string, request: string) =>

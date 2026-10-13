@@ -10,7 +10,7 @@ import { PrototypeScreen } from './screens/PrototypeScreen';
 import { QAScreen } from './screens/QAScreen';
 import { RequestScreen } from './screens/RequestScreen';
 import { SrsScreen } from './screens/SrsScreen';
-import { SCREEN_LABELS, stepOf, type AuthStatus, type JobKind, type Project, type Screen } from './types';
+import { SCREEN_LABELS, projectTypeLabel, stepOf, type AuthStatus, type JobKind, type Project, type Screen } from './types';
 
 const readSlug = () => /^#\/p\/([a-z0-9-]+)/.exec(window.location.hash)?.[1] ?? null;
 
@@ -206,7 +206,7 @@ function ProjectView({ slug, onHome }: { slug: string; onHome: () => void }) {
         </button>
         <div className="min-w-0">
           <h1 className="truncate text-xl font-bold tracking-tight">{project.name}</h1>
-          <p className="text-sm text-muted">{SCREEN_LABELS[screen]}{view && ' (đang xem lại)'}</p>
+          <p className="text-sm text-muted">{projectTypeLabel(project.projectType)} · {SCREEN_LABELS[screen]}{view && ' (đang xem lại)'}</p>
         </div>
         <span className="flex-1" />
         <ProgressBar current={stepOf(screen)} reached={reached} onSelect={running ? undefined : selectStep} />

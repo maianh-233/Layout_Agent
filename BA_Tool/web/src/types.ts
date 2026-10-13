@@ -22,6 +22,20 @@ export interface Answer {
 }
 
 export type Phase = 'business' | 'ui';
+
+export type ProjectType = 'website' | 'ecommerce' | 'crm' | 'erp' | 'management-generic';
+
+export const PROJECT_TYPE_OPTIONS: { value: ProjectType; label: string; hint: string }[] = [
+  { value: 'website', label: 'Website giới thiệu / Landing page', hint: 'Giới thiệu doanh nghiệp, sản phẩm, form liên hệ / đặt lịch' },
+  { value: 'ecommerce', label: 'Thương mại điện tử', hint: 'Bán hàng online: giỏ hàng, thanh toán, đơn hàng' },
+  { value: 'crm', label: 'CRM', hint: 'Quản lý khách hàng: lead, cơ hội bán hàng, chăm sóc khách' },
+  { value: 'erp', label: 'ERP', hint: 'Quản trị doanh nghiệp: mua, bán, kho, kế toán, nhân sự…' },
+  { value: 'management-generic', label: 'Hệ thống quản lý khác', hint: 'Phần mềm quản lý nội bộ theo nghiệp vụ riêng' },
+];
+
+/** Dự án tạo trước khi có loại dự án được coi là website. */
+export const projectTypeLabel = (t: ProjectType | undefined) =>
+  PROJECT_TYPE_OPTIONS.find((o) => o.value === (t ?? 'website'))!.label;
 export type Screen = 'request' | 'business-qa' | 'business-review' | 'ui-qa' | 'ui-review' | 'prototype' | 'done';
 export type JobKind = 'business-questions' | 'business-srs' | 'ui-questions' | 'ui-srs' | 'prototype';
 
@@ -34,6 +48,7 @@ export interface PhaseState {
 export interface Project {
   slug: string;
   name: string;
+  projectType?: ProjectType;
   createdAt: string;
   updatedAt: string;
   screen: Screen;

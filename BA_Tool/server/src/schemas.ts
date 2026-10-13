@@ -51,6 +51,24 @@ export type Answer = z.infer<typeof AnswerSchema>;
 
 export type Phase = 'business' | 'ui';
 
+/** Loại dự án — quyết định file domain tham chiếu và số câu hỏi. */
+export const PROJECT_TYPES = ['website', 'ecommerce', 'crm', 'erp', 'management-generic'] as const;
+export type ProjectType = (typeof PROJECT_TYPES)[number];
+
+export const PROJECT_TYPE_LABELS: Record<ProjectType, string> = {
+  website: 'Website giới thiệu / Landing page',
+  ecommerce: 'Thương mại điện tử',
+  crm: 'CRM',
+  erp: 'ERP',
+  'management-generic': 'Hệ thống quản lý khác',
+};
+
+/** Dự án tạo trước khi có trường này được coi là website. */
+export const projectTypeOf = (p: { projectType?: ProjectType }): ProjectType => p.projectType ?? 'website';
+
+/** CRM/ERP/quản lý: hệ thống lớn, cần nhiều bước AI hơn. */
+export const isLargeSystem = (t: ProjectType) => t === 'crm' || t === 'erp' || t === 'management-generic';
+
 /** Màn hình hiện tại của dự án — dùng để "Mở tiếp" đúng chỗ. */
 export type Screen = 'request' | 'business-qa' | 'business-review' | 'ui-qa' | 'ui-review' | 'prototype' | 'done';
 
@@ -65,6 +83,8 @@ export interface PhaseState {
 export interface Project {
   slug: string;
   name: string;
+  /** Không có ở dự án cũ — dùng projectTypeOf() để đọc */
+  projectType?: ProjectType;
   createdAt: string;
   updatedAt: string;
   screen: Screen;
