@@ -1,0 +1,186 @@
+// Màn hình 3 — Xem / sửa SRS: cây file bên trái, nội dung bên phải.
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { api } from '../api';
+import { ErrorBanner } from '../components/ConfirmDialog';
+import { Markdown } from '../components/Markdown';
+import type { Project, SrsFileInfo } from '../types';
+
+interface Props {
+  project: Project;
+  /** Nút hành động chính ở góc phải (Sang bước tiếp) */
+  actions: ReactNode;
+  /** Chỉ hiển thị nhãn Mới / Đã sửa khi vừa chạy xong một bước */
+  showChanges: boolean;
+}
+
+interface TreeNode {
+  name: string;
+  path: string;
+  children: TreeNode[];
+  file?: SrsFileInfo;
+}
+
+function buildTree(files: SrsFileInfo[]): TreeNode {
+  const root: TreeNode = { name: 'srs', path: '', children: [] };
+  for (const f of files) {
+    const parts = f.path.split('/');
+    let node = root;
+    parts.forEach((part, i) => {
+      const p = parts.slice(0, i + 1).join('/');
+      let child = node.children.find((c) => c.name === part);
+      if (!child) {
+        child = { name: part, path: p, children: [] };
+        node.children.push(child);
+      }
+      if (i === parts.length - 1) child.file = f;
+      node = child;
+    });
+  }
+  // README lên đầu, thư mục sau file cùng cấp số
+  const sort = (n: TreeNode) => {
+    n.children.sort((a, b) => (a.name === 'README.md' ? -1 : b.name === 'README.md' ? 1 : a.name.localeCompare(b.name, 'vi', { numeric: true })));
+    n.children.forEach(sort);
+  };
+  sort(root);
+  return root;
+}
+
+export function SrsScreen({ project, actions, showChanges }: Props) {
+  const [files, setFiles] = useState<SrsFileInfo[]>([]);
+  const [current, setCurrent] = useState('README.md');
+  const [content, setContent] = useState('');
+  const [draft, setDraft] = useState<string | null>(null);
+  const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const changes = useMemo(() => new Map(project.srsChanges.map((c) => [c.path, c.kind])), [project.srsChanges]);
+  const tree = useMemo(() => buildTree(files), [files]);
+  const totals = files.reduce((t, f) => ({ c: t.c + f.needConfirm, p: t.p + f.proposed }), { c: 0, p: 0 });
+
+  const refreshList = () => api.listSrs(project.slug).then(setFiles).catch((e: Error) => setError(e.message));
+  useEffect(() => void refreshList(), [project.slug, project.updatedAt]);
+
+  useEffect(() => {
+    setDraft(null);
+    api
+      .readSrs(project.slug, current)
+      .then((r) => setContent(r.content))
+      .catch((e: Error) => {
+        setContent('');
+        setError(e.message);
+      });
+  }, [project.slug, current]);
+
+  const open = (path: string) => {
+    if (draft !== null && draft !== content && !window.confirm('Bỏ các thay đổi chưa lưu?')) return;
+    setCurrent(path);
+  };
+
+  const saveDraft = async () => {
+    if (draft === null) return;
+    setSaving(true);
+    try {
+      await api.writeSrs(project.slug, current, draft);
+      setContent(draft);
+      setDraft(null);
+      await refreshList();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const renderNode = (n: TreeNode, depth: number): ReactNode =>
+    n.children.map((c) =>
+      c.file ? (
+        <button
+          key={c.path}
+          type="button"
+          onClick={() => open(c.path)}
+          style={{ paddingLeft: 8 + depth * 14 }}
+          className={[
+            'flex w-full items-center gap-2 rounded-lg py-1.5 pr-2 text-left text-[13px]',
+            current === c.path ? 'bg-brand-soft text-brand-dark' : 'hover:bg-stone-50',
+          ].join(' ')}
+        >
+          <span className="min-w-0 flex-1 truncate">{c.name}</span>
+          {showChanges && changes.get(c.path) === 'new' && <Badge cls="bg-emerald-100 text-emerald-800">Mới</Badge>}
+          {showChanges && changes.get(c.path) === 'modified' && <Badge cls="bg-violet-100 text-violet-800">Đã sửa</Badge>}
+          {c.file.needConfirm > 0 && <Badge cls="bg-amber-100 text-amber-800" title="Số chỗ CẦN XÁC NHẬN">{c.file.needConfirm}</Badge>}
+        </button>
+      ) : (
+        <div key={c.path}>
+          <p style={{ paddingLeft: 8 + depth * 14 }} className="py-1.5 text-[13px] font-semibold text-stone-500">
+            ▾ {c.name}/
+          </p>
+          {renderNode(c, depth + 1)}
+        </div>
+      ),
+    );
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap gap-2 text-sm">
+          <span className="rounded-full bg-white px-3 py-1 ring-1 ring-line">{files.length} file</span>
+          <span className="tag-confirm !rounded-full !px-3 !py-1 !font-medium">[CẦN XÁC NHẬN] × {totals.c}</span>
+          <span className="tag-propose !rounded-full !px-3 !py-1 !font-medium">[ĐỀ XUẤT] × {totals.p}</span>
+        </div>
+        <span className="flex-1" />
+        <a className="btn-outline" href={`/api/projects/${project.slug}/srs.zip`} download>
+          ⬇ Tải về (.zip)
+        </a>
+        {actions}
+      </div>
+
+      {error && <ErrorBanner message={error} onClose={() => setError('')} />}
+
+      <div className="flex flex-col gap-4 lg:flex-row">
+        <nav className="rounded-2xl border border-line bg-white p-2 shadow-sm lg:sticky lg:top-4 lg:max-h-[calc(100vh-8rem)] lg:w-72 lg:shrink-0 lg:overflow-y-auto">
+          {files.length === 0 ? <p className="p-3 text-sm text-muted">Chưa có file SRS.</p> : renderNode(tree, 0)}
+        </nav>
+
+        <article className="min-w-0 flex-1 rounded-2xl border border-line bg-white shadow-sm">
+          <header className="flex flex-wrap items-center gap-3 border-b border-line px-5 py-3">
+            <span className="min-w-0 flex-1 truncate font-mono text-sm text-muted">srs/{current}</span>
+            {draft === null ? (
+              <button type="button" className="btn-outline py-1.5" onClick={() => setDraft(content)}>
+                ✎ Sửa
+              </button>
+            ) : (
+              <>
+                <button type="button" className="btn-ghost py-1.5" onClick={() => setDraft(null)}>
+                  Hủy
+                </button>
+                <button type="button" className="btn-primary py-1.5" disabled={saving || draft === content} onClick={() => void saveDraft()}>
+                  {saving ? 'Đang lưu…' : 'Lưu'}
+                </button>
+              </>
+            )}
+          </header>
+          <div className="p-5 sm:p-8">
+            {draft === null ? (
+              <Markdown source={content} />
+            ) : (
+              <textarea
+                className="input min-h-[70vh] resize-y font-mono text-[13px] leading-6"
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                spellCheck={false}
+              />
+            )}
+          </div>
+        </article>
+      </div>
+    </div>
+  );
+}
+
+function Badge({ cls, children, title }: { cls: string; children: ReactNode; title?: string }) {
+  return (
+    <span title={title} className={`shrink-0 rounded-full px-1.5 py-0.5 text-[11px] font-semibold ${cls}`}>
+      {children}
+    </span>
+  );
+}

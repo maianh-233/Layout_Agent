@@ -1,0 +1,57 @@
+@import 'tailwindcss';
+
+@theme {
+  --font-sans: 'Be Vietnam Pro', ui-sans-serif, system-ui, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, Consolas, monospace;
+
+  --color-ink: #1c1917;
+  --color-muted: #78716c;
+  --color-line: #e7e5e4;
+  --color-paper: #fafaf9;
+  --color-brand: #0f766e;
+  --color-brand-dark: #115e59;
+  --color-brand-soft: #ccfbf1;
+}
+
+body {
+  @apply bg-paper text-ink font-sans antialiased;
+}
+
+/* Nút dùng chung */
+.btn-primary {
+  @apply inline-flex items-center justify-center gap-2 rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-dark focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed disabled:opacity-50;
+}
+.btn-outline {
+  @apply inline-flex items-center justify-center gap-2 rounded-xl border border-line bg-white px-4 py-2 text-sm font-medium text-stone-700 transition hover:border-stone-300 hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-40;
+}
+.btn-ghost {
+  @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-medium text-stone-600 transition hover:bg-stone-100 disabled:cursor-not-allowed disabled:opacity-40;
+}
+.input {
+  @apply w-full rounded-xl border border-line bg-white px-3 py-2 text-[15px] outline-none transition placeholder:text-stone-400 focus:border-brand focus:ring-2 focus:ring-brand/20;
+}
+
+/* Nội dung markdown SRS */
+.md {
+  @apply text-[15px] leading-7 text-ink;
+}
+.md h1 { @apply text-2xl font-bold mt-2 mb-4; }
+.md h2 { @apply text-xl font-semibold mt-8 mb-3 pb-1 border-b border-line; }
+.md h3 { @apply text-lg font-semibold mt-6 mb-2; }
+.md h4 { @apply font-semibold mt-4 mb-2; }
+.md p { @apply my-3; }
+.md ul { @apply list-disc pl-6 my-3; }
+.md ol { @apply list-decimal pl-6 my-3; }
+.md li { @apply my-1; }
+.md a { @apply text-brand underline; }
+.md code { @apply font-mono text-[13px] bg-stone-100 rounded px-1 py-0.5; }
+.md pre { @apply bg-stone-900 text-stone-100 rounded-lg p-4 overflow-x-auto my-4 text-[13px]; }
+.md pre code { @apply bg-transparent p-0 text-inherit; }
+.md blockquote { @apply border-l-4 border-line pl-4 text-muted my-4; }
+.md table { @apply w-full border-collapse my-4 text-sm; }
+.md .table-wrap { @apply overflow-x-auto; }
+.md th { @apply bg-stone-100 text-left font-semibold border border-line px-3 py-2; }
+.md td { @apply border border-line px-3 py-2 align-top; }
+
+.tag-confirm { @apply bg-amber-100 text-amber-900 ring-1 ring-amber-300 rounded px-1 font-semibold; }
+.tag-propose { @apply bg-sky-100 text-sky-900 ring-1 ring-sky-300 rounded px-1 font-semibold; }
