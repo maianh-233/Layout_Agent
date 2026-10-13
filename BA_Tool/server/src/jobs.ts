@@ -18,7 +18,8 @@ import {
   writeAnswersFile,
   writeRequestFile,
 } from './projects.js';
-import { FollowupSetSchema, QuestionSetSchema, projectTypeOf, type JobKind, type Phase, type Project } from './schemas.js';
+import { FollowupSetSchema, QuestionSetSchema, projectTypeOf, usesRegistry, type JobKind, type Phase, type Project } from './schemas.js';
+import { checkRegistry, writeGenerated } from './registry.js';
 
 export type JobEvent =
   | AgentEvent
@@ -130,7 +131,9 @@ function closeClients(job: Job) {
 
 async function runJob(job: Job, params: { targetDir?: string }) {
   const dir = projectDir(job.slug);
-  const projectType = projectTypeOf(await loadProject(job.slug));
+  const loaded = await loadProject(job.slug);
+  const projectType = projectTypeOf(loaded);
+  const srsMode = usesRegistry(loaded) ? 'registry' : 'legacy';
   const relFile = (f: string) => {
     const base = params.targetDir && path.resolve(f).toLowerCase().startsWith(path.resolve(params.targetDir).toLowerCase())
       ? params.targetDir
@@ -139,7 +142,7 @@ async function runJob(job: Job, params: { targetDir?: string }) {
   };
   const onEvent = (e: AgentEvent) => emit(job, e.type === 'file' ? { ...e, path: relFile(e.path) } : e);
   const runAs = (mode: JobKind, extra?: string) =>
-    runSkill({ mode, projectType, projectDir: dir, targetDir: params.targetDir, extra, onEvent, signal: job.abort.signal });
+    runSkill({ mode, projectType, srsMode, projectDir: dir, targetDir: params.targetDir, extra, onEvent, signal: job.abort.signal });
   const run = (extra?: string) => runAs(job.kind, extra);
 
   /** Viết SRS nghiệp vụ / bổ sung SRS giao diện (dùng cho tác vụ *-srs và khi vòng bổ sung không có câu nào). */
@@ -149,7 +152,9 @@ async function runJob(job: Job, params: { targetDir?: string }) {
     await fs.mkdir(srsDir(job.slug), { recursive: true });
     const before = await snapshotSrs(job.slug);
     emit(job, { type: 'step', text: phase === 'business' ? 'Đang viết SRS nghiệp vụ…' : 'Đang bổ sung SRS giao diện…' });
-    await runAs(phase === 'business' ? 'business-srs' : 'ui-srs');
+    const mode = phase === 'business' ? 'business-srs' : 'ui-srs';
+    await runAs(mode);
+    const registryErrors = srsMode === 'registry' ? await finishRegistry(phase, mode) : undefined;
     const changes = await diffSrs(job.slug, before);
     if (!changes.some((c) => c.path === 'README.md') && !before.has('README.md')) {
       throw new Error('AI chưa tạo được mục lục srs/README.md. Hãy thử chạy lại.');
@@ -163,8 +168,33 @@ async function runJob(job: Job, params: { targetDir?: string }) {
     await updateProject(job.slug, (pr) => {
       pr.srsChanges = changes;
       pr.screen = phase === 'business' ? 'business-review' : 'ui-review';
+      if (registryErrors) pr.registryErrors = registryErrors;
     });
     emit(job, { type: 'step', text: `Hoàn tất: ${changes.length} file SRS được tạo / cập nhật.` });
+  };
+
+  /**
+   * Kiểm tra registry + phân quyền; sai thì cho AI sửa đúng các lỗi đó một lần.
+   * Sau đó sinh Phần 12 và bảng 4.2 bằng code. Trả về lỗi còn lại (không chặn kết quả SRS).
+   */
+  const finishRegistry = async (phase: Phase, mode: JobKind): Promise<string[]> => {
+    const srs = srsDir(job.slug);
+    emit(job, { type: 'step', text: 'Đang kiểm tra sổ đăng ký mã (_registry.json) và ma trận phân quyền…' });
+    let check = await checkRegistry(srs, phase);
+    if (!check.ok) {
+      emit(job, { type: 'step', text: `Registry có ${check.errors.length} lỗi, đang yêu cầu AI sửa…` });
+      await runAs(
+        mode,
+        `SỬA REGISTRY: SRS đã viết xong. Chỉ sửa các lỗi dưới đây trong srs/_registry.json, srs/_permissions.json ` +
+          `(và file SRS liên quan nếu lỗi do thiếu file / thiếu mã). Không viết lại SRS. Định dạng: references/registry-guide.md.\n` +
+          check.errors.map((e) => `- ${e}`).join('\n'),
+      );
+      check = await checkRegistry(srs, phase);
+    }
+    const written = await writeGenerated(srs, check, { uiDone: phase === 'ui' });
+    if (written.length) emit(job, { type: 'step', text: `Đã sinh tự động: ${written.join(', ')}.` });
+    if (!check.ok) emit(job, { type: 'step', text: `Registry còn ${check.errors.length} lỗi — xem cảnh báo ở màn hình SRS.` });
+    return check.errors;
   };
 
   switch (job.kind) {

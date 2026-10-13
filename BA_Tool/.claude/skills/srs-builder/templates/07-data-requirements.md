@@ -10,6 +10,8 @@
 
 ## 7.3. Entity Relationship Diagram (ERD) — Sơ đồ quan hệ thực thể
 
+<!-- SRS_MODE: registry: một erDiagram cho mỗi module (### 7.3.x <Module>) + một ERD tổng -->
+
 ```mermaid
 erDiagram
 ```
@@ -18,8 +20,8 @@ erDiagram
 
 ## 7.4. Data Dictionary — Từ điển dữ liệu
 
-| Thực thể | Trường | Kiểu | Bắt buộc | Ràng buộc | Mô tả |
-|---|---|---|---|---|---|
+| Thực thể | Trường | Kiểu | Bắt buộc | Ràng buộc | Ví dụ | Mô tả |
+|---|---|---|---|---|---|---|
 
 <!-- nội dung -->
 

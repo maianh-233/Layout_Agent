@@ -12,6 +12,13 @@
 
 <!-- nội dung -->
 
+### Nhập / xuất file
+
+<!-- Chỉ khi có import/export; không có thì bỏ mục con này -->
+
+| Đối tượng | Chiều | Định dạng | Cột bắt buộc | Kiểm tra | Xử lý dòng lỗi | Giới hạn | FR |
+|---|---|---|---|---|---|---|---|
+
 ## 8.4. API Specifications — Đặc tả API
 
 <!-- nội dung -->

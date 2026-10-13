@@ -6,7 +6,9 @@
 
 ## 4.2. User Roles and Permissions — Vai trò và quyền hạn
 
-<!-- nội dung -->
+<!-- nội dung: mô tả vai trò, phạm vi dữ liệu, nguyên tắc phân quyền bằng lời -->
+
+<!-- AUTO:RBAC --><!-- /AUTO:RBAC -->
 
 ## 4.3. User Needs — Nhu cầu người dùng
 

@@ -141,6 +141,9 @@ export const PROJECT_TYPE_LABELS: Record<ProjectType, string> = {
 /** Dự án tạo trước khi có trường này được coi là website. */
 export const projectTypeOf = (p: { projectType?: ProjectType }): ProjectType => p.projectType ?? 'website';
 
+/** Dự án tạo từ khi có loại dự án dùng sổ đăng ký mã (srs/_registry.json); dự án cũ giữ cách viết cũ. */
+export const usesRegistry = (p: { projectType?: ProjectType }) => p.projectType !== undefined;
+
 /** CRM/ERP/quản lý: hệ thống lớn, cần nhiều bước AI hơn. */
 export const isLargeSystem = (t: ProjectType) => t === 'crm' || t === 'erp' || t === 'management-generic';
 
@@ -181,6 +184,8 @@ export interface Project {
   ui: PhaseState;
   /** File SRS được tạo mới / sửa ở lần chạy gần nhất (đường dẫn tương đối trong srs/) */
   srsChanges: { path: string; kind: 'new' | 'modified' }[];
+  /** Lỗi còn lại của srs/_registry.json / _permissions.json sau lần tạo SRS gần nhất (dự án mới) */
+  registryErrors?: string[];
   prototype: { dir: string | null; builtAt: string | null; pages: string[] };
   /** Tác vụ AI đang chạy hoặc vừa kết thúc */
   job: {

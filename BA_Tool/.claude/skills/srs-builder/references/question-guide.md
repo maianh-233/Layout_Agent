@@ -138,8 +138,14 @@ Quy tắc (backend kiểm tra, sai là bị trả về sửa):
 ## Vòng câu hỏi bổ sung (`business-followup`, `ui-followup`)
 
 Ghi ra `followup-<phase>.json` cùng định dạng, khác ở:
-- **Tối đa 15 câu**, có thể ít hơn. Không có gì cần hỏi thì ghi `{ "groups": [] }`.
-- Mỗi câu **bắt buộc có `reason`**: một câu ngắn cho BA biết vì sao hỏi và liên quan câu nào, bắt đầu bằng `Thiếu:`, `Mơ hồ:`, `Mâu thuẫn:` hoặc `Ghi chú BA:`. Ví dụ: `"Mâu thuẫn: q23 nói trừ kho khi duyệt đơn, q41 nói trừ kho khi xuất hàng."`
+- **Càng ít câu càng tốt** (thường 3–8 câu, tối đa 15) để khách không bị hỏi dồn. Không có gì cần hỏi thì ghi `{ "groups": [] }`.
+- **Gộp các điểm liên quan vào một câu.** Ở vòng này được phép (và nên) hỏi nhiều ý trong một câu nếu chúng cùng một chủ đề / cùng một luồng. Khi gộp:
+  - dùng `type: "text"`, câu hỏi mở đầu bằng chủ đề rồi liệt kê ngắn các ý, ví dụ: "Về việc duyệt đơn mua hàng, anh/chị cho biết giúp: đơn từ bao nhiêu tiền thì cần duyệt, ai là người duyệt, và nếu bị từ chối thì đơn quay về đâu?";
+  - `hint` gợi ý cách trả lời từng ý, ví dụ "Ví dụ: trên 50 triệu → giám đốc duyệt; từ chối → trả về người lập sửa lại";
+  - tối đa 3–4 ý mỗi câu; `reason` nêu đủ các câu gốc liên quan (ví dụ `Thiếu: q31, q33; Mơ hồ: q35`);
+  - `srsSections` gộp các mục của mọi ý.
+  - Chỉ tách riêng khi ý đó cần khách **chọn** một phương án rõ ràng (dùng `single`/`multi`) hoặc là mâu thuẫn quan trọng cần trả lời dứt khoát.
+- Mỗi câu **bắt buộc có `reason`**: ngắn gọn cho BA biết vì sao hỏi và liên quan câu nào, bắt đầu bằng `Thiếu:`, `Mơ hồ:`, `Mâu thuẫn:` hoặc `Ghi chú BA:`. Ví dụ: `"Mâu thuẫn: q23 nói trừ kho khi duyệt đơn, q41 nói trừ kho khi xuất hàng."`
 - Không dùng `showIf`. `id` đặt tùy ý (`f1`, `f2`…) — backend tự đánh lại.
 - Nhóm theo chủ đề (ví dụ "Bán hàng — làm rõ", "Kho — làm rõ"), sắp theo mức ảnh hưởng tới SRS, quan trọng trước.
 - Câu hỏi vẫn bằng ngôn ngữ đời thường, **nhắc lại điều khách đã nói** để khách hiểu ngữ cảnh: "Ở phần trước anh/chị cho biết …, nhưng cũng nói … Vậy thực tế …?"

@@ -69,6 +69,8 @@ export interface Project {
   business: PhaseState;
   ui: PhaseState;
   srsChanges: { path: string; kind: 'new' | 'modified' }[];
+  /** Lỗi còn lại của _registry.json / _permissions.json (dự án mới) */
+  registryErrors?: string[];
   prototype: { dir: string | null; builtAt: string | null; pages: string[] };
   job: {
     id: string;

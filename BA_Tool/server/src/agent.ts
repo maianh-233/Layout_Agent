@@ -13,6 +13,8 @@ export type AgentEvent =
 export interface RunOptions {
   mode: JobKind;
   projectType: ProjectType;
+  /** registry: dự án mới dùng srs/_registry.json; legacy: dự án cũ */
+  srsMode: 'registry' | 'legacy';
   projectDir: string;
   targetDir?: string;
   /** Ghi chú thêm vào cuối prompt, ví dụ lỗi JSON của lần chạy trước */
@@ -109,8 +111,8 @@ function explainError(code: string | undefined, fallback: string): AgentError {
 const looksLikeUsageLimit = (text: string) => /usage limit|limit reached|rate.?limit|hit your limit|quota/i.test(text);
 
 export async function runSkill(opts: RunOptions): Promise<void> {
-  const { mode, projectType, projectDir, targetDir, onEvent } = opts;
-  const lines = [`/srs-builder MODE: ${mode}`, `PROJECT_TYPE: ${projectType}`, `PROJECT_DIR: ${projectDir}`];
+  const { mode, projectType, srsMode, projectDir, targetDir, onEvent } = opts;
+  const lines = [`/srs-builder MODE: ${mode}`, `PROJECT_TYPE: ${projectType}`, `SRS_MODE: ${srsMode}`, `PROJECT_DIR: ${projectDir}`];
   if (targetDir) lines.push(`TARGET_DIR: ${targetDir}`);
   if (opts.extra) lines.push('', opts.extra);
 

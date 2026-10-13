@@ -61,6 +61,17 @@ sequenceDiagram
 ## 5.6. State Machine Diagram — Sơ đồ trạng thái
 
 <!-- Chỉ khi có đối tượng có vòng đời trạng thái; nếu không: Không áp dụng -->
+<!-- Mỗi chứng từ: một sơ đồ + một bảng; trùng với documents[] trong _registry.json (SRS_MODE: registry) -->
+
+### DOC-xxx — <Tên chứng từ>
+
+```mermaid
+stateDiagram-v2
+    [*] --> Nhap
+```
+
+| Trạng thái hiện tại | Sự kiện | Điều kiện | Trạng thái mới | Ai thực hiện (ROLE) | Quyền |
+|---|---|---|---|---|---|
 
 ## 5.7. Validation and Error Handling — Kiểm tra và xử lý lỗi
 

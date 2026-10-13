@@ -11,6 +11,8 @@
 
 ## 2. Quy ước mã (ghi lại ở 12.1)
 
+> **`SRS_MODE: registry`** (dự án mới): dùng quy ước `<LOẠI>-<MODULE>-<3 số>` và sổ đăng ký mã theo [registry-guide.md](registry-guide.md); bảng dưới chỉ áp dụng cho `SRS_MODE: legacy` (dự án cũ).
+
 | Tiền tố | Ý nghĩa | Ví dụ | Nơi định nghĩa |
 |---|---|---|---|
 | `BR-` | Quy tắc / yêu cầu nghiệp vụ | BR-001 | 03 (3.2, 3.5) |
@@ -62,3 +64,29 @@ Mọi sơ đồ viết bằng khối ```` ```mermaid ````. Giữ sơ đồ gọn
 - Mỗi `screens/<screen-slug>.md`: 9.10 wireframe (khối ASCII hoặc mô tả theo vùng), 9.11 đặc tả (mục đích, thành phần, dữ liệu hiển thị, hành động → kết quả), 9.13 form/bảng (trường, kiểu, bắt buộc, validation, thông báo lỗi).
 - Design system (9.2–9.5) lấy từ câu trả lời giao diện; nếu khách không có, đề xuất bảng màu/font phù hợp ngành và gắn `[ĐỀ XUẤT]`. Mã màu ghi HEX.
 - Khi cập nhật các file cũ: dùng thao tác sửa đúng mục, không ghi đè cả file. Thêm `(cập nhật v0.2)` sau tiêu đề mục đã sửa.
+
+## 6. Chế độ registry (`SRS_MODE: registry`)
+
+- Đọc [registry-guide.md](registry-guide.md) trước khi viết. Ghi `srs/_registry.json`, `srs/_permissions.json` **song song** với các file SRS (thêm mã nào vào file nào thì thêm vào registry ngay).
+- **Không viết `12-traceability.md`** và **không viết bảng ma trận ở 4.2** — code sinh (xem registry-guide mục 5).
+- Tạo thêm `05-functional/_integration.md` theo mẫu `templates/05-functional/_integration.md`. Hệ thống chỉ có một module thì ghi ngắn "Không áp dụng — chỉ có một module".
+- Mỗi file module tên theo mã module viết thường: `05-functional/sales.md`, `05-functional/inv.md`…
+
+## 7. Nội dung bắt buộc cho CRM / ERP / hệ thống quản lý
+
+Chỉ viết khi **có dữ liệu từ câu trả lời** (kể cả câu hỏi bổ sung). Thiếu dữ liệu → ghi `[CẦN XÁC NHẬN]` tại chỗ + một dòng 13.9. Không lấy nội dung từ file domain để điền (xem `domains/README.md`).
+
+| Nội dung | Đặt ở đâu | Cách viết |
+|---|---|---|
+| Ma trận phân quyền (RBAC) | 4.2 + `_permissions.json` | 4.2: mô tả từng vai trò, phạm vi dữ liệu, nguyên tắc phân quyền bằng lời + dòng `<!-- AUTO:RBAC --><!-- /AUTO:RBAC -->`. Ma trận chi tiết ghi trong `_permissions.json`. 6.4 chỉ dẫn chiếu tới 4.2. |
+| Luồng phê duyệt | 3.5 (mục con "Ma trận phê duyệt") + 5.6 của module | Bảng `Chứng từ \| Cấp \| Người duyệt (ROLE) \| Điều kiện \| Duyệt thay khi vắng \| Khi từ chối \| BR`. Mỗi dòng có một mã BR. Bước duyệt phải xuất hiện thành chuyển trạng thái trong 5.6. |
+| Vòng đời chứng từ | 5.6 của module + `documents` trong registry + 13.4 | Mỗi chứng từ: một khối `stateDiagram-v2` **và** bảng `Trạng thái hiện tại \| Sự kiện \| Điều kiện \| Trạng thái mới \| Ai thực hiện (ROLE) \| Quyền`. Mọi trạng thái không phải trạng thái cuối phải có đường ra. Nội dung bảng phải trùng `documents[].transitions`. |
+| Liên kết giữa các module | `05-functional/_integration.md` | Sơ đồ tổng thể `flowchart LR` + bảng `Sự kiện nguồn (module · chứng từ · trạng thái) \| Tác động (module đích · dữ liệu thay đổi) \| Thời điểm \| Đồng bộ/không \| BR \| FR`. Ví dụ: duyệt đơn bán → giữ tồn kho; xuất kho → tạo công nợ phải thu. |
+| Quy tắc đánh mã chứng từ | 3.5 (mục con "Quy tắc đánh mã") + `documents[].numbering` | Bảng `Chứng từ \| Mẫu mã \| Reset theo \| Ví dụ`, ví dụ `DH-{YYYY}-{00000}` → `DH-2026-00001`. |
+| Tiền tệ, làm tròn, múi giờ | 3.5 (BR) + 6.12 | Đơn vị tiền, số lẻ, cách làm tròn từng loại số (đơn giá, thành tiền, thuế), định dạng ngày, múi giờ. |
+| Báo cáo & dashboard | Module `RPT` (`05-functional/rpt.md`) | Bảng `Báo cáo / KPI \| Công thức \| Nguồn dữ liệu (ENT) \| Bộ lọc \| Vai trò được xem \| Kỳ cập nhật \| FR`. Công thức ghi rõ phép tính, ví dụ `Tỉ lệ thắng = số cơ hội Thắng / (Thắng + Thua) trong kỳ`. |
+| Import / Export | 8.3 (mục con "Nhập / xuất file") + FR của module liên quan | Bảng `Đối tượng \| Chiều (nhập/xuất) \| Định dạng \| Cột bắt buộc \| Kiểm tra \| Xử lý dòng lỗi \| Giới hạn số dòng \| FR`. |
+| Dữ liệu | 7.2–7.6, 13.5 | 7.3: **một `erDiagram` cho mỗi module** + **một ERD tổng** (chỉ thực thể + quan hệ). 7.4 Data Dictionary cột `Thực thể \| Trường \| Kiểu \| Bắt buộc \| Ràng buộc \| Ví dụ \| Mô tả` cho mọi thực thể trong registry. |
+| Audit | 6.15 + 7.13 | Bảng `Đối tượng \| Thao tác cần ghi \| Thông tin ghi (ai, lúc nào, giá trị cũ → mới, IP) \| Thời gian lưu \| Ai xem được`. |
+
+Yêu cầu kiểm thử được: không viết "nhanh", "dễ dùng", "nhiều" — luôn có con số hoặc điều kiện cụ thể; khách chưa nêu thì `[ĐỀ XUẤT]` kèm con số đề xuất.

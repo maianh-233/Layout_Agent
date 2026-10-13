@@ -1,5 +1,7 @@
 # PHẦN 12. REQUIREMENTS TRACEABILITY — TRUY VẾT YÊU CẦU
 
+<!-- Chỉ dùng cho SRS_MODE: legacy. SRS_MODE: registry → KHÔNG tạo file này, tool tự sinh từ _registry.json -->
+
 ## 12.1. Requirement ID Convention — Quy ước mã yêu cầu
 
 | Tiền tố | Ý nghĩa |

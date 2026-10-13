@@ -27,6 +27,22 @@ flowchart TD
 
 <!-- nội dung -->
 
+<!-- Các mục con dưới đây: chỉ viết khi có dữ liệu (CRM/ERP/quản lý); không có thì bỏ -->
+
+### Ma trận phê duyệt
+
+| Chứng từ | Cấp | Người duyệt (ROLE) | Điều kiện | Duyệt thay khi vắng | Khi từ chối | BR |
+|---|---|---|---|---|---|---|
+
+### Quy tắc đánh mã chứng từ
+
+| Chứng từ | Mẫu mã | Reset theo | Ví dụ |
+|---|---|---|---|
+
+### Tiền tệ, làm tròn, múi giờ
+
+<!-- nội dung -->
+
 ## 3.6. Business Constraints — Các giới hạn nghiệp vụ
 
 <!-- nội dung -->
