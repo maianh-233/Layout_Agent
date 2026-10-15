@@ -1,17 +1,19 @@
-// Thanh tiến trình 4 bước: ① Nghiệp vụ → ② Giao diện → ③ Dựng prototype → ④ Hoàn tất
+// Thanh tiến trình theo luồng: mặc định ① Nghiệp vụ → ② Giao diện → ③ Dựng prototype → ④ Hoàn tất
 import { STEP_LABELS } from '../types';
 
 interface Props {
+  /** Nhãn các bước (theo luồng của dự án) */
+  labels?: readonly string[];
   current: number;
   /** Bước lớn nhất người dùng đã tới — cho phép bấm quay lại */
   reached: number;
   onSelect?: (step: number) => void;
 }
 
-export function ProgressBar({ current, reached, onSelect }: Props) {
+export function ProgressBar({ labels = STEP_LABELS, current, reached, onSelect }: Props) {
   return (
     <ol className="flex flex-wrap items-center gap-x-2 gap-y-2 text-sm">
-      {STEP_LABELS.map((label, i) => {
+      {labels.map((label, i) => {
         const done = i < current;
         const active = i === current;
         const clickable = onSelect && i <= reached && !active;
@@ -37,7 +39,7 @@ export function ProgressBar({ current, reached, onSelect }: Props) {
               </span>
               <span className="font-medium">{label}</span>
             </button>
-            {i < STEP_LABELS.length - 1 && <span className="text-stone-300">→</span>}
+            {i < labels.length - 1 && <span className="text-stone-300">→</span>}
           </li>
         );
       })}

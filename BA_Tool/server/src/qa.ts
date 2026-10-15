@@ -77,6 +77,8 @@ async function openPage(context: BrowserContext, url: string, role: string | nul
   const failed: string[] = [];
   page.on('console', (m) => {
     if (m.type() === 'error' && !/favicon|Failed to load resource/i.test(m.text())) errors.push(m.text().slice(0, 300));
+    // motion.js / atmos.js bỏ qua phần tử lỗi để trang vẫn chạy, nhưng vẫn phải báo để sửa
+    else if (m.type() === 'warning' && /^\[(motion|atmos)\]/.test(m.text())) errors.push(m.text().slice(0, 300));
   });
   page.on('pageerror', (e) => errors.push(e.message.slice(0, 300)));
   page.on('requestfailed', (r) => {
@@ -100,23 +102,77 @@ async function openPage(context: BrowserContext, url: string, role: string | nul
   return { page, errors, failed, loadError };
 }
 
+/**
+ * Đo phần bề ngang nội dung thật sự dùng ở màn hình rộng (1920px). Nội dung dồn vào một cột hẹp giữa trang,
+ * hai bên trống trơn là lỗi bố cục thường gặp của prototype do AI dựng.
+ */
+const WIDE = { width: 1920, height: 1080 };
+async function measureSpread(page: import('playwright').Page) {
+  await page.setViewportSize(WIDE);
+  await page.waitForTimeout(300);
+  return page.evaluate(() => {
+    const W = document.documentElement.clientWidth;
+    let left = W;
+    let right = 0;
+    const sel = 'h1,h2,h3,h4,p,li,img,picture,video,canvas,svg,table,form,input,select,textarea,button,a,label,blockquote,figure';
+    for (const el of Array.from(document.body.querySelectorAll(sel))) {
+      const r = el.getBoundingClientRect();
+      if (r.width < 2 || r.height < 2 || r.bottom < 0) continue;
+      const st = getComputedStyle(el);
+      if (st.visibility === 'hidden' || st.position === 'fixed' || Number(st.opacity) === 0) continue;
+      // Ảnh / video tràn viền (full-bleed) làm nền thì vẫn tính
+      left = Math.max(0, Math.min(left, r.left));
+      right = Math.min(W, Math.max(right, r.right));
+    }
+    return right > left ? { W, used: Math.round(right - left), left: Math.round(left), right: Math.round(W - right) } : null;
+  });
+}
+
+/** Ảnh trong trang: <img> và background-image (CSS). */
+async function collectImages(page: import('playwright').Page) {
+  await page.evaluate(() => document.querySelectorAll('img[loading="lazy"]').forEach((i) => ((i as HTMLImageElement).loading = 'eager')));
+  await page.waitForTimeout(1500);
+  return page.evaluate(() => {
+    const out: { src: string; broken: boolean }[] = [];
+    for (const img of Array.from(document.images)) {
+      const src = img.currentSrc || img.src;
+      if (src) out.push({ src, broken: img.complete && img.naturalWidth === 0 });
+    }
+    for (const el of Array.from(document.body.querySelectorAll('*')).slice(0, 4000)) {
+      const bg = getComputedStyle(el).backgroundImage;
+      for (const m of bg.matchAll(/url\(["']?([^"')]+)["']?\)/g)) out.push({ src: m[1], broken: false });
+    }
+    return out;
+  });
+}
+
+const BANNED_IMG = /picsum\.photos|placehold|placeholder\.com|dummyimage|loremflickr|source\.unsplash|fakeimg|placekitten|images\.unsplash\.com|via\.placeholder/i;
+
 export async function runQa(opts: {
   target: string;
-  srs: string;
+  /** Không có ở chế độ nhanh (landing page không có SRS) */
+  srs?: string;
   appName: string;
+  /** Chế độ nhanh: bỏ phần registry / vai trò / style guide / HANDOFF */
+  quick?: boolean;
   onProgress?: (text: string) => void;
 }): Promise<QaReport> {
-  const { target, srs } = opts;
+  const { target, srs, quick } = opts;
   const progress = opts.onProgress ?? (() => {});
-  const check = await checkRegistry(srs, 'ui');
+  const check = srs && !quick ? await checkRegistry(srs, 'ui') : null;
   const ctx: Ctx = {
     target,
-    registry: check.registry,
-    permissions: check.permissions,
-    screens: check.registry ? await screenPaths(srs, check.registry) : [],
+    registry: check?.registry,
+    permissions: check?.permissions,
+    screens: srs && check?.registry ? await screenPaths(srs, check.registry) : [],
   };
   const pages = await listPages(target);
   const issues: Omit<QaIssue, 'id'>[] = [];
+  // Ảnh do công cụ use_image tải về (images.ts); không có file → prototype chưa dùng công cụ ảnh, chỉ bắt link ngoài
+  const creditsFile = path.join(target, 'assets', 'img', '_credits.json');
+  const credited = existsSync(creditsFile)
+    ? new Set((JSON.parse(await fs.readFile(creditsFile, 'utf8')) as { file: string }[]).map((x) => x.file))
+    : null;
   const screenshots: QaReport['screenshots'] = [];
   const add = (i: Omit<QaIssue, 'id'>) => issues.push(i);
 
@@ -126,7 +182,7 @@ export async function runQa(opts: {
   // Màn hình trong SRS chưa có trang
   for (const s of ctx.screens)
     if (!pages.includes(s.path)) add({ severity: 'major', category: 'Thiếu màn hình', message: `${s.id} (${s.name}) chưa có trang ${s.path}`, page: s.path });
-  if (!pages.includes('components.html')) add({ severity: 'major', category: 'Style guide', message: 'Chưa có trang components.html' });
+  if (!quick && !pages.includes('components.html')) add({ severity: 'major', category: 'Style guide', message: 'Chưa có trang components.html' });
 
   const { chromium } = await import('playwright');
   let browser: Browser;
@@ -141,7 +197,8 @@ export async function runQa(opts: {
     // 1. Từng trang × 3 kích thước
     for (const vp of VIEWPORTS) {
       progress(`QA: mở ${pages.length} trang ở ${vp.width}px…`);
-      const context = await browser.newContext({ viewport: { width: vp.width, height: vp.height } });
+      // Giảm chuyển động: nội dung "hiện dần khi cuộn" (motion.js) hiện ngay để chụp ảnh và đo bố cục đúng
+      const context = await browser.newContext({ viewport: { width: vp.width, height: vp.height }, reducedMotion: 'reduce' });
       for (let i = 0; i < pages.length; i += 4) {
         await Promise.all(
           pages.slice(i, i + 4).map(async (rel) => {
@@ -189,6 +246,41 @@ export async function runQa(opts: {
                 const file = fileURLToPath(href.split('#')[0].split('?')[0]);
                 if (!existsSync(file)) add({ severity: 'major', category: 'Link hỏng', message: `Link tới ${path.relative(target, file).split(path.sep).join('/')} không tồn tại`, page: rel });
               }
+              const spread = await measureSpread(page);
+              if (spread && spread.used / spread.W < 0.72) {
+                const pct = Math.round((spread.used / spread.W) * 100);
+                add({
+                  severity: spread.used / spread.W < 0.6 ? 'major' : 'minor',
+                  category: 'Bố cục dồn giữa',
+                  message: `Ở màn hình ${spread.W}px nội dung chỉ chiếm ${pct}% bề ngang (trống trái ${spread.left}px, phải ${spread.right}px). Nới khung nội dung theo references/layout-guide.md (container rộng, lưới thêm cột ở xl/2xl, nền section tràn viền).`,
+                  page: rel,
+                  viewport: 'wide',
+                });
+              }
+              // Ảnh: chỉ ảnh thật tải qua use_image (assets/img + _credits.json)
+              const seenImg = new Set<string>();
+              for (const im of await collectImages(page)) {
+                const key = im.src.split('?')[0];
+                if (seenImg.has(key)) continue;
+                seenImg.add(key);
+                const short = im.src.startsWith('data:') ? `${im.src.slice(0, 30)}…` : decodeURIComponent(key.replace(pathToFileURL(target).href + '/', ''));
+                if (/^data:image\/(png|jpe?g|webp|gif|avif)/i.test(im.src) && im.src.length > 2000)
+                  add({ severity: 'major', category: 'Ảnh tự tạo', message: `Ảnh nhúng base64 (${short}) — phải dùng ảnh thật qua search_images / use_image`, page: rel });
+                else if (/^https?:/i.test(im.src)) {
+                  if (/fonts\.(googleapis|gstatic)\.com/.test(im.src)) continue;
+                  add({
+                    severity: 'major',
+                    category: 'Ảnh không đúng nguồn',
+                    message: `${BANNED_IMG.test(im.src) ? 'Ảnh giữ chỗ / link tự nghĩ' : 'Ảnh lấy từ link ngoài'}: ${im.src.slice(0, 120)} — phải tải qua search_images / use_image về assets/img/`,
+                    page: rel,
+                  });
+                } else if (im.src.startsWith('file:')) {
+                  const relImg = path.relative(target, fileURLToPath(key)).split(path.sep).join('/');
+                  if (im.broken || !existsSync(path.join(target, relImg))) add({ severity: 'major', category: 'Ảnh hỏng', message: `Không hiển thị được ảnh ${relImg}`, page: rel });
+                  else if (/\.(jpe?g|png|webp|avif)$/i.test(relImg) && credited && !credited.has(relImg))
+                    add({ severity: 'major', category: 'Ảnh không đúng nguồn', message: `${relImg} không do use_image tải về (không có trong assets/img/CREDITS.md)`, page: rel });
+                }
+              }
               const expected = ctx.screens.find((s) => s.path === rel);
               if (expected) {
                 const ds = await page.evaluate(() => document.body?.getAttribute('data-screen'));
@@ -206,7 +298,7 @@ export async function runQa(opts: {
     // 2. Từng vai trò: menu đúng quyền, trang cấm hiện "Không có quyền truy cập"
     if (ctx.registry && ctx.permissions && pages.includes('index.html')) {
       progress('QA: đăng nhập lần lượt từng vai trò…');
-      const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+      const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce' });
       const login = await openPage(context, pathToFileURL(path.join(target, 'index.html')).href, null);
       const loginText = (await login.page.evaluate(() => document.body?.innerText ?? '')).toLowerCase();
       await login.page.close();
@@ -248,14 +340,17 @@ export async function runQa(opts: {
     }
 
     // 3. HANDOFF.md
-    progress('QA: đang viết HANDOFF.md cho đội frontend…');
-    await writeHandoff({ ...ctx, srs, appName: opts.appName, pages, browser, roleNames });
+    if (srs && !quick) {
+      progress('QA: đang viết HANDOFF.md cho đội frontend…');
+      await writeHandoff({ ...ctx, srs, appName: opts.appName, pages, browser, roleNames });
+    }
   } finally {
     await browser.close();
   }
 
-  for (const h of await scanHardcoded(target, pages))
-    add({ severity: 'minor', category: 'Hardcode', message: `${h.count} chỗ dùng mã HEX / class giá trị tùy ý thay vì token`, page: h.file });
+  if (!quick)
+    for (const h of await scanHardcoded(target, pages))
+      add({ severity: 'minor', category: 'Hardcode', message: `${h.count} chỗ dùng mã HEX / class giá trị tùy ý thay vì token`, page: h.file });
 
   const order: Record<Severity, number> = { critical: 0, major: 1, minor: 2 };
   const sorted = issues.sort((a, b) => order[a.severity] - order[b.severity] || (a.page ?? '').localeCompare(b.page ?? ''));
@@ -284,7 +379,7 @@ function renderQaMd(r: QaReport): string {
   const L = [
     '# Báo cáo QA prototype',
     '',
-    `> Tool kiểm tự động bằng Playwright lúc ${new Date(r.createdAt).toLocaleString('vi-VN')}: ${r.pages.length} trang × 3 kích thước (375 / 768 / 1440px).`,
+    `> Tool kiểm tự động bằng Playwright lúc ${new Date(r.createdAt).toLocaleString('vi-VN')}: ${r.pages.length} trang × 3 kích thước (375 / 768 / 1440px), đo độ phủ bề ngang ở 1920px.`,
     '',
     '| Mức | Số lỗi |',
     '|---|---|',

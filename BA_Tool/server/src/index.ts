@@ -14,6 +14,7 @@ import {
   listProjects,
   listSrsFiles,
   loadProject,
+  quickPrototypeDir,
   resolveSrsPath,
   saveProject,
   srsDir,
@@ -26,7 +27,8 @@ import { checkDesignTokens } from './design.js';
 import { buildReview, codeReview, readReview, reviewSummary, writeReview } from './review.js';
 import { diffDirs, isClientFile, listAll, listVersions, lockVersion, versionRoot } from './versions.js';
 import { QA_JSON } from './qa.js';
-import { JOB_KINDS, PROJECT_TYPES, SaveAnswersSchema, type Screen } from './schemas.js';
+import { ConceptSchema, presetSummaries, writePresetCatalog } from './presets.js';
+import { FLOWS, JOB_KINDS, PROJECT_TYPES, SaveAnswersSchema, type Screen } from './schemas.js';
 
 const app = express();
 app.use(express.json({ limit: '5mb' }));
@@ -65,13 +67,16 @@ app.get('/api/projects', h(async (_req, res) => {
 }));
 
 app.post('/api/projects', h(async (req, res) => {
-  const { name, projectType } = z
+  const { name, projectType, flow } = z
     .object({
       name: z.string().trim().min(1, 'Hãy nhập tên dự án').max(120),
-      projectType: z.enum(PROJECT_TYPES, { message: 'Hãy chọn loại dự án' }),
+      flow: z.enum(FLOWS, { message: 'Hãy chọn chế độ' }),
+      // Chế độ nhanh luôn là landing page nên không cần loại dự án
+      projectType: z.enum(PROJECT_TYPES, { message: 'Hãy chọn loại dự án' }).optional(),
     })
+    .refine((b) => b.flow === 'quick' || b.projectType, { message: 'Hãy chọn loại dự án', path: ['projectType'] })
     .parse(req.body);
-  res.json(await createProject(name, projectType));
+  res.json(await createProject(name, projectType ?? 'website', flow));
 }));
 
 app.get('/api/projects/:slug', h(async (req, res) => {
@@ -94,12 +99,23 @@ app.post('/api/projects/:slug/screen', h(async (req, res) => {
 
 // ---------- Tác vụ AI ----------
 
+/** Preset thiết kế cho chế độ nhanh (tên, mô tả, màu mẫu, từ khóa nhận diện) */
+app.get('/api/presets', (_req, res) => {
+  res.json(presetSummaries());
+});
+
 app.post('/api/projects/:slug/request', h(async (req, res) => {
-  const { request } = z.object({ request: z.string().trim().min(10, 'Yêu cầu quá ngắn') }).parse(req.body);
+  const { request, concept } = z
+    .object({ request: z.string().trim().min(10, 'Yêu cầu quá ngắn'), concept: ConceptSchema.optional() })
+    .parse(req.body);
   const slug = param(req, 'slug');
   await requireLogin();
-  await updateProject(slug, (p) => void (p.request = request));
-  res.json({ jobId: await startJob(slug, 'business-questions') });
+  const p = await updateProject(slug, (pr) => {
+    pr.request = request;
+    if (concept) pr.concept = concept;
+  });
+  if (p.flow === 'quick') res.json({ jobId: await startJob(slug, 'quick-prototype', { targetDir: quickPrototypeDir(slug) }) });
+  else res.json({ jobId: await startJob(slug, p.flow === 'standard' ? 'questions' : 'business-questions') });
 }));
 
 app.post('/api/projects/:slug/jobs', h(async (req, res) => {
@@ -108,6 +124,9 @@ app.post('/api/projects/:slug/jobs', h(async (req, res) => {
       kind: z.enum(JOB_KINDS),
       targetDir: z.string().optional(),
       findingId: z.string().optional(),
+      feedback: z.string().trim().max(8000).optional(),
+      /** quick-revise: chỉ sửa trong section này */
+      section: z.string().trim().regex(/^[\w-]{1,80}$/, 'Section không hợp lệ').optional(),
     })
     .parse(req.body);
   const slug = param(req, 'slug');
@@ -122,6 +141,13 @@ app.post('/api/projects/:slug/jobs', h(async (req, res) => {
       throw new HttpError(400, 'Chưa có SRS giao diện (09-ui-ux). Hãy hoàn tất bước Giao diện trước.');
     }
   }
+  if (body.kind === 'quick-revise') {
+    const p = await loadProject(slug);
+    if (p.flow !== 'quick') throw new HttpError(400, 'Chỉ dùng cho dự án chế độ nhanh.');
+    if (!p.prototype.dir || !existsSync(p.prototype.dir)) throw new HttpError(400, 'Chưa có prototype. Hãy gửi mô tả để dựng trước.');
+    targetDir = p.prototype.dir;
+  }
+  if (body.kind === 'srs' && !(await loadProject(slug)).business.questions) throw new HttpError(400, 'Chưa có bộ câu hỏi.');
   if (body.kind === 'prototype-qa' || body.kind === 'prototype-fix') {
     const p = await loadProject(slug);
     if (!p.prototype.dir || !existsSync(p.prototype.dir)) throw new HttpError(400, 'Chưa có prototype. Hãy dựng prototype trước.');
@@ -132,7 +158,7 @@ app.post('/api/projects/:slug/jobs', h(async (req, res) => {
     if (!body.findingId) throw new HttpError(400, 'Thiếu mã lỗi cần sửa');
     if ((await loadProject(slug)).pendingFix) throw new HttpError(409, 'Đang có một bản sửa chờ xem. Hãy lưu hoặc bỏ bản sửa đó trước.');
   }
-  res.json({ jobId: await startJob(slug, body.kind, { targetDir, findingId: body.findingId }) });
+  res.json({ jobId: await startJob(slug, body.kind, { targetDir, findingId: body.findingId, feedback: body.feedback, section: body.section }) });
 }));
 
 /** "Chạy lại bước này" — chạy lại tác vụ lỗi gần nhất (ví dụ sau khi chạm giới hạn sử dụng). */
@@ -205,6 +231,20 @@ app.get('/api/projects/:slug/srs.zip', h(async (req, res) => {
   zip.on('error', (e: Error) => res.destroy(e));
   zip.pipe(res);
   zip.glob('**/*', { cwd: dir, ignore: ['_versions/**'] }, { prefix: 'srs' });
+  await zip.finalize();
+}));
+
+/** Tải toàn bộ prototype (bỏ file QA nội bộ) để gửi khách / đội frontend. */
+app.get('/api/projects/:slug/prototype.zip', h(async (req, res) => {
+  const slug = param(req, 'slug');
+  const p = await loadProject(slug);
+  if (!p.prototype.dir || !existsSync(p.prototype.dir)) throw new HttpError(404, 'Chưa có prototype');
+  res.setHeader('Content-Type', 'application/zip');
+  res.setHeader('Content-Disposition', `attachment; filename="${slug}-prototype.zip"`);
+  const zip = new ZipArchive({ zlib: { level: 9 } });
+  zip.on('error', (e: Error) => res.destroy(e));
+  zip.pipe(res);
+  zip.glob('**/*', { cwd: p.prototype.dir, ignore: ['_qa/**', '_qa-report.md', 'node_modules/**', '.git/**'] }, { prefix: 'prototype' });
   await zip.finalize();
 }));
 
@@ -372,6 +412,8 @@ app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
 
 app.listen(PORT, '127.0.0.1', () => {
   console.log(`[server] http://127.0.0.1:${PORT}  (model: ${MODEL})`);
+  // Danh mục preset cho AI (references/presets.md) luôn khớp với presets.ts
+  writePresetCatalog().catch((e) => console.warn('[server] Không ghi được presets.md:', e instanceof Error ? e.message : e));
   // Kiểm tra Claude Code ngay khi khởi động
   checkAuth(true).then((st) => {
     console.log(`[server] Lệnh claude: ${st.cli.installed ? st.cli.version : 'không tìm thấy trong PATH'}`);

@@ -7,6 +7,7 @@ import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import { DesignTokensSchema, TOKENS_FILE, type DesignTokens } from './design.js';
+import { ROOT_DIR } from './config.js';
 
 const HEADER = (src: string) => `/* Sinh tự động bởi SRS & Prototype Builder từ ${src} — không sửa tay. Sửa SRS rồi dựng lại prototype. */\n`;
 
@@ -142,6 +143,47 @@ export async function renderIconsJs(): Promise<string> {
   return iconsCache;
 }
 
+// ---------- Chuyển động & tương tác ----------
+
+/** Thư viện chuyển động (server/assets/motion.js): hiện dần khi cuộn, parallax, nghiêng 3D theo chuột… dùng bằng data-*. */
+export const MOTION_FILE = 'assets/js/motion.js';
+
+export async function writeMotion(target: string): Promise<string> {
+  const to = path.join(target, MOTION_FILE);
+  await fs.mkdir(path.dirname(to), { recursive: true });
+  await fs.copyFile(path.join(ROOT_DIR, 'server', 'assets', 'motion.js'), to);
+  return MOTION_FILE;
+}
+
+/** Thành phần tương tác cho landing page (server/assets/ui.js): menu mobile, tabs, accordion, carousel, lightbox, modal, form… */
+export const UI_FILE = 'assets/js/ui.js';
+
+export async function writeUi(target: string): Promise<string> {
+  const to = path.join(target, UI_FILE);
+  await fs.mkdir(path.dirname(to), { recursive: true });
+  await fs.copyFile(path.join(ROOT_DIR, 'server', 'assets', 'ui.js'), to);
+  return UI_FILE;
+}
+
+/** Lớp "không khí" cho landing page (server/assets/atmos.js): hạt sáng, mây, bầu trời đổi màu, cảnh nhiều lớp, cảnh ghim. */
+export const ATMOS_FILE = 'assets/js/atmos.js';
+
+export async function writeAtmos(target: string): Promise<string> {
+  const to = path.join(target, ATMOS_FILE);
+  await fs.mkdir(path.dirname(to), { recursive: true });
+  await fs.copyFile(path.join(ROOT_DIR, 'server', 'assets', 'atmos.js'), to);
+  return ATMOS_FILE;
+}
+
+/** id các <section> / <header> / <footer> trong trang — để BA chọn phạm vi khi sửa theo góp ý. */
+export async function listSections(target: string, page = 'index.html'): Promise<string[]> {
+  const file = path.join(target, page);
+  if (!existsSync(file)) return [];
+  const html = await fs.readFile(file, 'utf8');
+  const ids = [...html.matchAll(/<(?:section|header|footer)[^>]*id="([^"]+)"/g)].map((m) => m[1]);
+  return [...new Set(ids)];
+}
+
 // ---------- Ghi vào folder prototype ----------
 
 /** Ghi file nền móng vào TARGET_DIR. Lỗi tokens → ném lỗi rõ ràng (sửa ở tab Rà soát rồi dựng lại). */
@@ -161,7 +203,7 @@ export async function writeFoundation(target: string, srs: string): Promise<stri
     await fs.mkdir(path.dirname(path.join(target, rel)), { recursive: true });
     await fs.writeFile(path.join(target, rel), content, 'utf8');
   }
-  return files.map(([rel]) => rel);
+  return [...files.map(([rel]) => rel), await writeMotion(target)];
 }
 
 /** Mọi trang HTML trong prototype (đường dẫn tương đối, dùng '/'), bỏ thư mục assets. index / components lên đầu. */

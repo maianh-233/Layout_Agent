@@ -1,6 +1,6 @@
 ---
 name: srs-builder
-description: Hỗ trợ BA thu thập yêu cầu khách hàng và tạo tài liệu SRS tiếng Việt chia nhiều file (Phần 0–13), sinh bộ câu hỏi nghiệp vụ/giao diện bằng ngôn ngữ đời thường, và dựng prototype HTML + Tailwind + JS thuần với dữ liệu giả. Dùng khi tool "SRS & Prototype Builder" gọi với MODE business-questions, business-followup, business-srs, ui-questions, ui-followup, ui-srs hoặc prototype.
+description: Hỗ trợ BA thu thập yêu cầu khách hàng và tạo tài liệu SRS tiếng Việt chia nhiều file (Phần 0–13), sinh câu hỏi bằng ngôn ngữ đời thường, và dựng prototype HTML + Tailwind + JS thuần với dữ liệu giả. Dùng khi tool "SRS & Prototype Builder" gọi với MODE quick-prototype, quick-revise, questions, srs, prototype (và các MODE của luồng cũ hai giai đoạn).
 ---
 
 # SRS Builder
@@ -8,19 +8,31 @@ description: Hỗ trợ BA thu thập yêu cầu khách hàng và tạo tài li�
 Skill được backend gọi bằng `/srs-builder` kèm các tham số dạng `KHÓA: giá trị`:
 
 ```
-MODE: <business-questions | business-followup | business-srs | ui-questions | ui-followup | ui-srs | srs-review | srs-fix | prototype | prototype-fix>
+MODE: <quick-prototype | quick-revise | questions | srs | srs-review | srs-fix | prototype | prototype-fix
+       | business-questions | business-followup | business-srs | ui-questions | ui-followup | ui-srs>
 PROJECT_TYPE: <website | ecommerce | crm | erp | management-generic>
 SRS_MODE: <registry | legacy>
 PROJECT_DIR: <đường dẫn tuyệt đối tới workspace/<slug>>
-TARGET_DIR: <chỉ có ở MODE prototype — folder đích>
+TARGET_DIR: <chỉ có ở MODE prototype*, quick-* — folder đích>
 ```
+
+Ba luồng làm việc:
+
+| Luồng | MODE | Hướng dẫn |
+|---|---|---|
+| **Nhanh** — landing page, mô tả → prototype, không SRS | `quick-prototype`, `quick-revise` | [references/quick-guide.md](references/quick-guide.md) |
+| **Chuẩn** — tối đa 10 câu hỏi → một SRS gộp → prototype | `questions`, `srs`, rồi `prototype`, `prototype-fix`, `srs-review`, `srs-fix` | [references/standard-guide.md](references/standard-guide.md) |
+| Cũ — hai giai đoạn (chỉ dự án tạo trước đây) | `business-*`, `ui-*` | các mục bên dưới |
+
+Mọi MODE dựng / sửa prototype đều theo [references/layout-guide.md](references/layout-guide.md): dùng hết bề ngang (không dồn giữa), đẹp trên cả máy tính và điện thoại, tránh kiểu "trông như AI"; và [references/motion-guide.md](references/motion-guide.md): chuyển động + tương tác (hover, theo chuột, theo cuộn) hợp phong cách, dùng `assets/js/motion.js` do tool sinh sẵn; và [references/image-guide.md](references/image-guide.md): **ảnh chụp thật, đúng chủ đề, chỉ lấy qua công cụ `search_images` / `use_image`** — cấm link tự nghĩ, picsum / placeholder, ảnh AI tạo, hình vẽ giả ảnh.
 
 Tham số nhận được: $ARGUMENTS
 
 ## Quy tắc chung (mọi chế độ)
 
 - Viết tiếng Việt. Giữ thuật ngữ tiếng Anh trong ngoặc khi cần.
-- **Không bịa thông tin.** Chỉ dùng yêu cầu ban đầu, câu trả lời của khách và các file SRS đã có.
+- **Ngoại lệ — mọi chữ hiển thị trên prototype viết tiếng Anh** (tránh lỗi phông tiếng Việt), `<html lang="en">`: dữ liệu giả (tên người, công ty, sản phẩm, địa chỉ, mô tả, ghi chú, đánh giá khách), nội dung landing page, và cả nhãn giao diện (menu, nút, tiêu đề cột, trạng thái, toast, thông báo lỗi). SRS vẫn viết tiếng Việt; khi dựng prototype thì dịch nhãn / thông báo trong SRS sang tiếng Anh tương đương. Số dạng `1,284`, tiền `1,250,000 ₫`.
+- **Không bịa thông tin.** Chỉ dùng yêu cầu ban đầu, câu trả lời của khách và các file SRS đã có. Ngoại lệ: luồng nhanh và luồng chuẩn được **tự bổ sung hợp lý theo ngành** — luồng chuẩn phải gắn `[ĐỀ XUẤT]` cho phần tự bổ sung.
 - Chỉ đọc file **khi cần** (để tiết kiệm token). Luôn đọc `srs/README.md` (mục lục) trước khi mở file SRS chi tiết.
 - Chỉ ghi file vào `PROJECT_DIR` (và `TARGET_DIR` ở chế độ prototype). Không xóa file nào.
 - Không hỏi lại người dùng: tool chạy không tương tác. Thiếu thông tin thì ghi `[CẦN XÁC NHẬN]` theo hướng dẫn viết SRS.
@@ -39,12 +51,23 @@ Tham số nhận được: $ARGUMENTS
 | File | Nội dung |
 |---|---|
 | `request.md` | Yêu cầu ban đầu của BA |
-| `answers-business.md` | Câu hỏi nghiệp vụ + câu trả lời + ghi chú BA (do backend tạo trước khi gọi `business-followup` / `business-srs`) |
+| `concept.md` | Luồng nhanh: mô tả + preset thiết kế + mức chuyển động + section (do backend sinh từ `server/src/presets.ts`) |
+| `answers-business.md` | Câu hỏi + câu trả lời + ghi chú BA (do backend tạo trước khi gọi `srs` ở luồng chuẩn, hoặc `business-followup` / `business-srs` ở luồng cũ) |
+| `feedback.md` | Luồng nhanh: góp ý / lỗi QA cần sửa (do backend tạo trước khi gọi `quick-revise`) |
 | `answers-ui.md` | Câu hỏi giao diện + câu trả lời + ghi chú BA (do backend tạo trước khi gọi `ui-followup` / `ui-srs`) |
 | `srs/` | Các file SRS |
 | `srs/_registry.json`, `srs/_permissions.json` | Sổ đăng ký mã, ma trận phân quyền (`SRS_MODE: registry`) |
 
 ## Các chế độ — đọc file nào, ghi file nào
+
+### `quick-prototype` / `quick-revise` (luồng nhanh)
+Làm đúng theo [references/quick-guide.md](references/quick-guide.md): đọc `concept.md` (preset + mức chuyển động do tool ghi), ghép section từ [references/sections.md](references/sections.md), hiệu ứng bằng `motion.js` + `atmos.js`, tương tác bằng `ui.js` ([references/ui-guide.md](references/ui-guide.md)); tự xem trang bằng công cụ `view_page` / `check_page`. Danh mục preset: [references/presets.md](references/presets.md) (tool sinh). Không đọc / ghi SRS. Chỉ ghi vào `TARGET_DIR` (và không ghi gì khác trong `PROJECT_DIR`).
+
+### `questions` (luồng chuẩn)
+Theo mục "MODE `questions`" trong [references/standard-guide.md](references/standard-guide.md). Chỉ ghi `PROJECT_DIR/questions-business.json`, tối đa 10 câu.
+
+### `srs` (luồng chuẩn) — SRS nghiệp vụ + giao diện trong một lượt
+Theo mục "MODE `srs`" trong [references/standard-guide.md](references/standard-guide.md) (`SRS_MODE: registry`). **Không** đọc `srs-writing-guide.md`, các mẫu khác trong `templates/`, hay file domain — mọi quy tắc cần thiết đã có trong standard-guide. Ghi toàn bộ `srs/` kể cả Phần 9, `_design-tokens.json`, `_registry.json` (có `screens`), `_permissions.json` (có `defaultScreen`); không viết `12-traceability.md`.
 
 ### `business-questions`
 1. Đọc `PROJECT_DIR/request.md`.
@@ -102,9 +125,9 @@ Tham số nhận được: $ARGUMENTS
 2. `PROJECT_DIR` là bản nháp; chỉ sửa trong `PROJECT_DIR/srs/`.
 
 ### `prototype`
-1. **Bắt buộc gọi skill `design-taste-frontend`** (taste skill) trước khi viết bất kỳ HTML nào, và tuân theo nó trong suốt quá trình dựng giao diện. Khi taste skill và SRS khác nhau, **SRS thắng**.
+1. **Bắt buộc gọi skill `design-taste-frontend`** (taste skill) trước khi viết bất kỳ HTML nào, và tuân theo nó trong suốt quá trình dựng giao diện. Khi taste skill và SRS khác nhau, **SRS thắng**; về độ rộng khung / responsive, [references/layout-guide.md](references/layout-guide.md) thắng taste skill.
 2. **`SRS_MODE: registry`:** làm theo [references/prototype-guide.md](references/prototype-guide.md).
-   - `assets/js/tailwind.tokens.js`, `assets/css/tokens.css`, `assets/js/icons.js`, `assets/js/permissions.js`, `assets/js/workflows.js`, `assets/js/demo-store.js` **đã có sẵn** trong `TARGET_DIR` (tool sinh từ SRS) — dùng API của chúng, không sửa, không viết lại.
+   - `assets/js/tailwind.tokens.js`, `assets/css/tokens.css`, `assets/js/icons.js`, `assets/js/permissions.js`, `assets/js/workflows.js`, `assets/js/demo-store.js`, `assets/js/motion.js` **đã có sẵn** trong `TARGET_DIR` (tool sinh từ SRS) — dùng API của chúng, không sửa, không viết lại.
    - Đăng nhập giả + chọn vai trò, đổi vai trò nhanh, ẩn / hiện theo `data-permission`, trang "Không có quyền truy cập", chuyển trạng thái chứng từ qua `Workflow`: theo mục 7 của prototype-guide.
    - Thứ tự: `components.js` → `components.html` → `layout.js` → mock data + `app.js` → `index.html` → từng màn hình → `README.md`.
    - Màn hình chỉ ghép từ component; không hardcode màu / cỡ chữ / khoảng cách.
@@ -113,14 +136,16 @@ Tham số nhận được: $ARGUMENTS
 
 ### `prototype-fix` — sửa lỗi QA của prototype
 1. **Bắt buộc gọi skill `design-taste-frontend`** trước khi sửa giao diện.
-2. Đọc `TARGET_DIR/_qa/report.json` (danh sách `issues`: mức, nhóm, trang, kích thước màn hình, mô tả) và [references/prototype-guide.md](references/prototype-guide.md).
+2. Đọc `TARGET_DIR/_qa/report.json` (danh sách `issues`: mức, nhóm, trang, kích thước màn hình, mô tả), [references/prototype-guide.md](references/prototype-guide.md) và [references/layout-guide.md](references/layout-guide.md).
 3. Sửa theo thứ tự mức: `critical` → `major` → `minor`. Cách xử lý từng nhóm:
    - *Lỗi JavaScript / console*, *Không tải được file*: sửa script / đường dẫn tương đối; kiểm thứ tự nạp script (prototype-guide mục 3).
    - *Link hỏng*: trỏ đúng `APP_META.screens[].path` hoặc tạo trang còn thiếu.
+   - *Ảnh không đúng nguồn / Ảnh hỏng*: thay bằng ảnh lấy qua `search_images` + `use_image` ([references/image-guide.md](references/image-guide.md)).
+   - *Bố cục dồn giữa* (đo ở 1920px): bỏ `max-w-*` hẹp bọc trang / section, vùng nội dung `min-w-0 flex-1` tới `max-w-content`, lưới thêm cột ở `xl/2xl` (layout-guide mục 1).
    - *Tràn ngang* (ở kích thước ghi trong lỗi): bọc bảng trong vùng cuộn ngang / chuyển thành thẻ dưới `md`, `min-w-0` cho cột flex, xuống dòng cho chuỗi dài.
    - *Phân quyền*, *Đăng nhập / vai trò*: menu lọc bằng `Perm.canOpen`, trang gọi `Perm.guard()` → `UI.noPermission()`; trang đăng nhập liệt kê đủ vai trò.
    - *Thiếu màn hình*: dựng trang theo `srs/09-ui-ux/screens/<slug>.md`, đúng đường dẫn trong lỗi.
    - *Hardcode*: thay bằng class token / CSS variable.
    - *Truy vết*: sửa `body[data-screen]`.
-4. Không sửa file tool sinh (`tailwind.tokens.js`, `tokens.css`, `icons.js`, `permissions.js`, `workflows.js`, `demo-store.js`, `HANDOFF.md`, `_qa*`). Lỗi do SRS (ví dụ phân quyền sai trong SRS) → không sửa prototype để "lách", ghi lại trong câu trả lời cuối.
+4. Không sửa file tool sinh (`tailwind.tokens.js`, `tokens.css`, `icons.js`, `permissions.js`, `workflows.js`, `demo-store.js`, `motion.js`, `HANDOFF.md`, `_qa*`). Lỗi do SRS (ví dụ phân quyền sai trong SRS) → không sửa prototype để "lách", ghi lại trong câu trả lời cuối.
 5. Sửa trong `TARGET_DIR`; tool tự chạy lại QA sau khi bạn xong.

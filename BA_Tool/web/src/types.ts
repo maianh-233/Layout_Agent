@@ -40,6 +40,22 @@ export const PROJECT_TYPE_OPTIONS: { value: ProjectType; label: string; hint: st
 /** Dự án tạo trước khi có loại dự án được coi là website. */
 export const projectTypeLabel = (t: ProjectType | undefined) =>
   PROJECT_TYPE_OPTIONS.find((o) => o.value === (t ?? 'website'))!.label;
+/** quick: landing page, mô tả → prototype; standard: 10 câu → SRS gộp → prototype; không có = dự án cũ hai giai đoạn */
+export type Flow = 'quick' | 'standard';
+
+export const FLOW_OPTIONS: { value: Flow; label: string; hint: string }[] = [
+  {
+    value: 'quick',
+    label: 'Nhanh — Landing page',
+    hint: 'Mô tả ngắn → AI dựng ngay landing page để show khách. Không hỏi, không viết SRS. Tốn ít lượt AI nhất.',
+  },
+  {
+    value: 'standard',
+    label: 'Đầy đủ — SRS + prototype',
+    hint: 'Tối đa 10 câu hỏi → AI viết một bộ SRS gộp (nghiệp vụ + giao diện) → dựng prototype có vai trò, dữ liệu giả.',
+  },
+];
+
 export type Screen = 'request' | 'business-qa' | 'business-review' | 'ui-qa' | 'ui-review' | 'prototype' | 'done';
 export type JobKind =
   | 'business-questions'
@@ -52,7 +68,11 @@ export type JobKind =
   | 'srs-fix'
   | 'prototype'
   | 'prototype-qa'
-  | 'prototype-fix';
+  | 'prototype-fix'
+  | 'questions'
+  | 'srs'
+  | 'quick-prototype'
+  | 'quick-revise';
 
 export interface PhaseState {
   questions: QuestionSet | null;
@@ -66,6 +86,7 @@ export interface Project {
   slug: string;
   name: string;
   projectType?: ProjectType;
+  flow?: Flow;
   createdAt: string;
   updatedAt: string;
   screen: Screen;
@@ -79,7 +100,9 @@ export interface Project {
   pendingFix?: { findingId: string; createdAt: string } | null;
   versions?: VersionInfo[];
   qa?: { createdAt: string; critical: number; major: number; minor: number; screenshots: number; error?: string };
-  prototype: { dir: string | null; builtAt: string | null; pages: string[] };
+  prototype: { dir: string | null; builtAt: string | null; pages: string[]; sections?: string[] };
+  concept?: Concept;
+  revisions?: { createdAt: string; text: string }[];
   job: {
     id: string;
     kind: JobKind;
@@ -89,7 +112,45 @@ export interface Project {
     resetsAt?: number;
     targetDir?: string;
     findingId?: string;
+    feedback?: string;
+    section?: string;
   } | null;
+}
+
+// ---------- Chế độ nhanh: concept & design preset ----------
+
+export const SECTION_KINDS = [
+  ['hero', 'Hero'],
+  ['story', 'Câu chuyện / About'],
+  ['features', 'Tính năng / Dịch vụ'],
+  ['gallery', 'Gallery / Lookbook'],
+  ['editorial', 'Editorial / Trích dẫn'],
+  ['pricing', 'Bảng giá'],
+  ['testimonials', 'Đánh giá'],
+  ['faq', 'FAQ'],
+  ['cta', 'CTA'],
+  ['contact', 'Liên hệ'],
+] as const;
+export type SectionKind = (typeof SECTION_KINDS)[number][0];
+export type MotionLevel = 'auto' | '1' | '2' | '3';
+
+/** Định hướng thiết kế BA chọn khi dựng nhanh — mọi trường không bắt buộc */
+export interface Concept {
+  preset: string;
+  motion: MotionLevel;
+  sections: SectionKind[];
+  mood: string;
+  reference: string;
+}
+
+export interface PresetSummary {
+  id: string;
+  name: string;
+  tagline: string;
+  keywords: string[];
+  motion: 1 | 2 | 3;
+  swatches: string[];
+  sections: string[];
 }
 
 export type Severity = 'critical' | 'major' | 'minor';
@@ -224,7 +285,22 @@ export const OTHER = '__other__';
 
 export const STEP_LABELS = ['Nghiệp vụ', 'Giao diện', 'Dựng prototype', 'Hoàn tất'] as const;
 
-export function stepOf(screen: Screen): number {
+/** Các bước trên thanh tiến trình theo luồng của dự án */
+export function stepLabels(flow: Flow | undefined): readonly string[] {
+  if (flow === 'quick') return ['Mô tả', 'Landing page'];
+  if (flow === 'standard') return ['Câu hỏi', 'SRS', 'Dựng prototype', 'Hoàn tất'];
+  return STEP_LABELS;
+}
+
+/** Màn hình mở lại khi bấm vào một bước đã qua */
+export function stepScreens(flow: Flow | undefined): Screen[] {
+  if (flow === 'quick') return ['request', 'done'];
+  if (flow === 'standard') return ['business-qa', 'ui-review', 'prototype', 'done'];
+  return ['business-review', 'ui-review', 'prototype', 'done'];
+}
+
+export function stepOf(screen: Screen, flow?: Flow): number {
+  if (flow === 'quick') return screen === 'done' ? 1 : 0;
   switch (screen) {
     case 'request':
     case 'business-qa':
@@ -238,6 +314,14 @@ export function stepOf(screen: Screen): number {
     case 'done':
       return 3;
   }
+}
+
+/** Nhãn màn hình theo luồng (luồng chuẩn: một bộ câu hỏi, một SRS gộp) */
+export function screenLabel(screen: Screen, flow?: Flow): string {
+  if (flow === 'quick') return screen === 'done' ? 'Xem & sửa landing page' : 'Mô tả landing page';
+  if (flow === 'standard' && screen === 'business-qa') return 'Trả lời câu hỏi';
+  if (flow === 'standard' && screen === 'ui-review') return 'Xem SRS';
+  return SCREEN_LABELS[screen];
 }
 
 export const SCREEN_LABELS: Record<Screen, string> = {

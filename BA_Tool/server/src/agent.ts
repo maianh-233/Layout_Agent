@@ -5,6 +5,8 @@ import path from 'node:path';
 import { query, type CanUseTool } from '@anthropic-ai/claude-agent-sdk';
 import { MODEL, ROOT_DIR, TASTE_SKILL } from './config.js';
 import { isLargeSystem, type JobKind, type ProjectType } from './schemas.js';
+import { IMAGE_TOOLS, imageServer } from './images.js';
+import { PREVIEW_TOOLS, previewServer } from './preview.js';
 
 export type AgentEvent =
   | { type: 'log'; text: string }
@@ -24,7 +26,7 @@ export interface RunOptions {
 }
 
 const WRITE_TOOLS = new Set(['Write', 'Edit', 'MultiEdit', 'NotebookEdit']);
-const READ_TOOLS = new Set(['Read', 'Glob', 'Grep', 'Skill', 'TodoWrite']);
+const READ_TOOLS = new Set(['Read', 'Glob', 'Grep', 'Skill', 'TodoWrite', ...IMAGE_TOOLS]);
 
 const norm = (p: string) => path.resolve(p).toLowerCase();
 const isInside = (file: string, root: string) => {
@@ -34,9 +36,9 @@ const isInside = (file: string, root: string) => {
 };
 
 /** Chỉ cho phép ghi trong folder dự án / folder prototype. Không có Bash nên không thể xóa file. */
-function makePermission(allowedRoots: string[]): CanUseTool {
+function makePermission(allowedRoots: string[], mcpTools: string[] = []): CanUseTool {
   return async (toolName, input) => {
-    if (READ_TOOLS.has(toolName)) return { behavior: 'allow', updatedInput: input };
+    if (READ_TOOLS.has(toolName) || mcpTools.includes(toolName)) return { behavior: 'allow', updatedInput: input };
     if (WRITE_TOOLS.has(toolName)) {
       const file = String(input.file_path ?? input.notebook_path ?? '');
       if (file && allowedRoots.some((r) => isInside(file, r))) return { behavior: 'allow', updatedInput: input };
@@ -58,6 +60,10 @@ const MAX_TURNS: Record<JobKind, number> = {
   'business-srs': 250,
   'ui-srs': 350,
   prototype: 400,
+  questions: 20,
+  srs: 400,
+  'quick-prototype': 170,
+  'quick-revise': 110,
 };
 
 /** CRM/ERP: nhiều module, nhiều màn hình hơn — vẫn chạy một lượt nên nới số bước. */
@@ -73,10 +79,18 @@ const LARGE_MAX_TURNS: Record<JobKind, number> = {
   'business-srs': 450,
   'ui-srs': 700,
   prototype: 900,
+  questions: 30,
+  srs: 700,
+  'quick-prototype': 170,
+  'quick-revise': 110,
 };
 
 /** Dựng / sửa giao diện prototype: bắt buộc dùng taste skill. */
-const usesTaste = (mode: JobKind) => mode === 'prototype' || mode === 'prototype-fix';
+const usesTaste = (mode: JobKind) => ['prototype', 'prototype-fix', 'quick-prototype', 'quick-revise'].includes(mode);
+/** Dựng / sửa prototype: có công cụ tìm & tải ảnh thật (images.ts) */
+const usesImages = usesTaste;
+/** Chế độ nhanh: AI được chụp màn hình trang đã dựng (preview.ts) để tự đánh giá, tự sửa */
+const usesPreview = (mode: JobKind) => mode === 'quick-prototype' || mode === 'quick-revise';
 
 /** Lỗi của tác vụ AI, kèm mã để giao diện xử lý riêng (ví dụ chạm giới hạn sử dụng). */
 export class AgentError extends Error {
@@ -135,6 +149,10 @@ export async function runSkill(opts: RunOptions): Promise<void> {
   /** SDK báo hạn mức tài khoản claude.ai đã bị từ chối */
   let limited: { resetsAt?: number } | null = null;
   let finished = false;
+  const log = (text: string) => onEvent({ type: 'log', text });
+  const preview = usesPreview(mode) && targetDir ? previewServer(targetDir, log) : null;
+  // Duyệt tool MCP qua canUseTool thay vì allowedTools (allowedTools tên trần sẽ bỏ qua canUseTool)
+  const mcpTools = usesImages(mode) && targetDir ? [...IMAGE_TOOLS, ...(preview ? PREVIEW_TOOLS : [])] : [];
 
   try {
     // Không truyền API key: SDK tự dùng phiên đăng nhập Claude Code của người dùng.
@@ -146,9 +164,17 @@ export async function runSkill(opts: RunOptions): Promise<void> {
         settingSources: ['user', 'project'],
         skills: usesTaste(mode) ? ['srs-builder', TASTE_SKILL] : ['srs-builder'],
         tools: ['Read', 'Write', 'Edit', 'Glob', 'Grep', 'Skill', 'TodoWrite'],
+        ...(usesImages(mode) && targetDir
+          ? {
+              mcpServers: {
+                images: imageServer(targetDir, log),
+                ...(preview ? { preview: preview.server } : {}),
+              },
+            }
+          : {}),
         additionalDirectories: targetDir ? [targetDir] : [],
         permissionMode: 'default',
-        canUseTool: makePermission(allowedRoots),
+        canUseTool: makePermission(allowedRoots, mcpTools),
         maxTurns: (isLargeSystem(projectType) ? LARGE_MAX_TURNS : MAX_TURNS)[mode],
         abortController: abort,
         env: { ...process.env, CLAUDE_AGENT_SDK_CLIENT_APP: 'ba-tool/1.0.0' },
@@ -214,6 +240,8 @@ export async function runSkill(opts: RunOptions): Promise<void> {
       throw new AgentError('Mất kết nối tới Claude. Kiểm tra mạng rồi chạy lại bước này.', 'network');
     }
     throw explainError(apiError, m);
+  } finally {
+    await preview?.close();
   }
   if (limited) throw usageLimitError(limited.resetsAt);
   if (!finished) throw explainError(apiError, 'AI kết thúc bất thường (không có kết quả).');

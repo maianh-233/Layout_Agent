@@ -8,9 +8,10 @@ import { ProgressBar } from './components/ProgressBar';
 import { ProjectList } from './screens/ProjectList';
 import { PrototypeScreen } from './screens/PrototypeScreen';
 import { QAScreen } from './screens/QAScreen';
+import { QuickScreen } from './screens/QuickScreen';
 import { RequestScreen } from './screens/RequestScreen';
 import { SrsScreen } from './screens/SrsScreen';
-import { SCREEN_LABELS, projectTypeLabel, stepOf, type AuthStatus, type JobKind, type Project, type Screen } from './types';
+import { projectTypeLabel, screenLabel, stepLabels, stepOf, stepScreens, type AuthStatus, type JobKind, type Project, type Screen } from './types';
 
 const readSlug = () => /^#\/p\/([a-z0-9-]+)/.exec(window.location.hash)?.[1] ?? null;
 
@@ -26,6 +27,10 @@ const JOB_TITLES: Record<JobKind, string> = {
   'prototype-qa': 'Đang kiểm thử prototype (Playwright)',
   'prototype-fix': 'AI đang sửa lỗi QA của prototype',
   prototype: 'AI đang dựng prototype',
+  questions: 'AI đang soạn tối đa 10 câu hỏi then chốt',
+  srs: 'AI đang viết SRS (nghiệp vụ + giao diện) trong một lượt',
+  'quick-prototype': 'AI đang dựng landing page',
+  'quick-revise': 'AI đang sửa landing page theo góp ý',
 };
 
 export default function App() {
@@ -48,7 +53,7 @@ export default function App() {
   return (
     <div className="min-h-screen">
       <header className="border-b border-line bg-white">
-        <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-3 sm:px-6">
+        <div className="mx-auto flex max-w-screen-2xl items-center gap-3 px-4 py-3 sm:px-6 lg:px-8">
           <button type="button" onClick={() => open(null)} className="flex items-center gap-2 font-bold tracking-tight">
             <span className="grid size-8 place-items-center rounded-lg bg-brand text-sm text-white">BA</span>
             SRS & Prototype Builder
@@ -58,7 +63,7 @@ export default function App() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
+      <main className="mx-auto max-w-screen-2xl px-4 py-6 sm:px-6 lg:px-8">
         {authError && <ErrorBanner message={authError} />}
         {auth?.envApiKey && (
           <div className="mb-6">
@@ -103,7 +108,8 @@ function ProjectView({ slug, onHome }: { slug: string; onHome: () => void }) {
 
   const screen = view ?? project.screen;
   const running = project.job?.status === 'running' ? project.job : null;
-  const reached = stepOf(project.screen);
+  const flow = project.flow;
+  const reached = stepOf(project.screen, flow);
 
   const run = async (fn: () => Promise<{ jobId: string }>) => {
     setJobError('');
@@ -114,7 +120,7 @@ function ProjectView({ slug, onHome }: { slug: string; onHome: () => void }) {
     }
     await reload();
   };
-  const startJob = (kind: JobKind, opts: { targetDir?: string; findingId?: string } = {}) =>
+  const startJob = (kind: JobKind, opts: { targetDir?: string; findingId?: string; feedback?: string; section?: string } = {}) =>
     run(() => api.startJob(slug, kind, opts));
   const goScreen = async (s: Screen) => {
     try {
@@ -128,8 +134,7 @@ function ProjectView({ slug, onHome }: { slug: string; onHome: () => void }) {
   // Bấm vào bước đã qua trên thanh tiến trình → xem lại (không đổi tiến độ)
   const selectStep = (step: number) => {
     // Bước đã hoàn thành thì xem lại màn SRS của bước đó
-    const target: Screen[] = ['business-review', 'ui-review', 'prototype', 'done'];
-    setView(step === reached ? null : target[step]);
+    setView(step === reached ? null : stepScreens(flow)[step]);
   };
 
   // "Chạy lại bước này": chạy lại đúng tác vụ lỗi gần nhất (kể cả prototype — server nhớ folder đích)
@@ -153,14 +158,14 @@ function ProjectView({ slug, onHome }: { slug: string; onHome: () => void }) {
   } else {
     switch (screen) {
       case 'request':
-        body = <RequestScreen initial={project.request} onSubmit={(t) => run(() => api.submitRequest(slug, t))} />;
+        body = <RequestScreen initial={project.request} initialConcept={project.concept} flow={flow} onSubmit={(t, concept) => run(() => api.submitRequest(slug, t, concept))} />;
         break;
       case 'business-qa':
         body = (
           <QAScreen
             project={project}
             phase="business"
-            onFinish={(mode) => startJob(mode === 'followup' ? 'business-followup' : 'business-srs')}
+            onFinish={(mode) => startJob(flow === 'standard' ? 'srs' : mode === 'followup' ? 'business-followup' : 'business-srs')}
           />
         );
         break;
@@ -205,6 +210,20 @@ function ProjectView({ slug, onHome }: { slug: string; onHome: () => void }) {
         break;
       case 'prototype':
       case 'done':
+        if (flow === 'quick') {
+          body =
+            project.prototype.dir && project.prototype.pages.length ? (
+              <QuickScreen
+                project={project}
+                onRevise={(feedback, section) => startJob('quick-revise', { feedback, section })}
+                onStartJob={(kind) => startJob(kind)}
+                onRestart={() => setView('request')}
+              />
+            ) : (
+              <RequestScreen initial={project.request} initialConcept={project.concept} flow={flow} onSubmit={(t, concept) => run(() => api.submitRequest(slug, t, concept))} />
+            );
+          break;
+        }
         body = (
           <PrototypeScreen
             project={project}
@@ -226,10 +245,13 @@ function ProjectView({ slug, onHome }: { slug: string; onHome: () => void }) {
         </button>
         <div className="min-w-0">
           <h1 className="truncate text-xl font-bold tracking-tight">{project.name}</h1>
-          <p className="text-sm text-muted">{projectTypeLabel(project.projectType)} · {SCREEN_LABELS[screen]}{view && ' (đang xem lại)'}</p>
+          <p className="text-sm text-muted">
+            {flow === 'quick' ? 'Landing page · chế độ nhanh' : projectTypeLabel(project.projectType)} · {screenLabel(screen, flow)}
+            {view && ' (đang xem lại)'}
+          </p>
         </div>
         <span className="flex-1" />
-        <ProgressBar current={stepOf(screen)} reached={reached} onSelect={running ? undefined : selectStep} />
+        <ProgressBar labels={stepLabels(flow)} current={stepOf(screen, flow)} reached={reached} onSelect={running ? undefined : selectStep} />
       </div>
 
       {jobError && (

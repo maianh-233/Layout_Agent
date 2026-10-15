@@ -31,8 +31,10 @@ Dự án cũ (`SRS_MODE: legacy`) dùng [prototype-guide-legacy.md](prototype-gu
 │   ├── js/permissions.js      # (CÓ SẴN — vai trò, quyền, màn hình được vào: window.Perm, window.APP_META)
 │   ├── js/workflows.js        # (CÓ SẴN — vòng đời chứng từ: window.Workflow)
 │   ├── js/demo-store.js       # (CÓ SẴN — lưu thay đổi demo: window.DemoStore)
+│   ├── js/motion.js           # (CÓ SẴN — chuyển động & tương tác qua data-*, xem motion-guide.md)
+│   ├── img/                   # Ảnh thật tải qua công cụ use_image (image-guide.md) + CREDITS.md
 │   ├── js/components.js       # Thư viện component (window.UI)
-│   ├── js/layout.js           # Khung ứng dụng: sidebar, topbar, breadcrumb, dải "Bản demo"
+│   ├── js/layout.js           # Khung ứng dụng: sidebar, topbar, breadcrumb, dải "Demo"
 │   ├── js/mock-data/<module>.js
 │   └── js/app.js              # Khởi động trang, trạng thái demo dùng chung
 ├── HANDOFF.md                 # (tool sinh sau QA — không viết)
@@ -46,7 +48,7 @@ Website / thương mại điện tử: trang ở `pages/<slug>.html`, `index.htm
 
 ```html
 <!doctype html>
-<html lang="vi">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -66,6 +68,7 @@ Website / thương mại điện tử: trang ở `pages/<slug>.html`, `index.htm
   <script src="../../assets/js/components.js"></script>
   <script src="../../assets/js/layout.js"></script>
   <script src="../../assets/js/app.js"></script>
+  <script src="../../assets/js/motion.js"></script>
   <script>
     // Chỉ ghép component + dữ liệu cho màn hình này
     Layout.mount({ title: 'Đơn bán', breadcrumb: [['Bán hàng'], ['Đơn bán']], actions: [...] }, (main) => { ... });
@@ -77,15 +80,17 @@ Website / thương mại điện tử: trang ở `pages/<slug>.html`, `index.htm
 - Đường dẫn tương đối theo độ sâu thư mục (`../../` cho `pages/<module>/`).
 - `data-screen` = mã SCR để truy vết; `data-module` = mã module.
 - Script riêng của trang ngắn: chỉ cấu hình component + dữ liệu.
-- Thứ tự script cố định: `icons` → `permissions` → `workflows` → `mock-data/*` → `demo-store` → `components` → `layout` → `app` → script trang.
+- Thứ tự script cố định: `icons` → `permissions` → `workflows` → `mock-data/*` → `demo-store` → `components` → `layout` → `app` → `motion` → script trang.
+- Ảnh (đăng nhập, sản phẩm, website): chỉ qua `search_images` / `use_image` theo [image-guide.md](image-guide.md); avatar người dùng là chữ cái đầu.
+- Chuyển động theo [motion-guide.md](motion-guide.md): hệ thống quản trị dùng mức **Tinh tế**; website / thương mại điện tử chọn mức theo phong cách trong 9.1. Component tự có chuyển động (modal, drawer, toast, dropdown, skeleton) viết trong `components.js`.
 - **Đường dẫn mỗi màn hình lấy đúng `APP_META.screens[].path`** (đã đọc từ "File prototype" trong đặc tả). Liên kết giữa các trang dùng `Perm.url('pages/sales/orders.html')`.
 
 ## 4. Thứ tự dựng
 
-1. **Đọc** `srs/_design-tokens.json`, `srs/09-ui-ux/01-design-system.md`, `04-states-responsive.md` (9.12), `02-navigation-sitemap.md`, `03-screen-inventory.md`, `srs/_registry.json` (screens, documents, roles), `srs/_permissions.json`. Mở `screens/<slug>.md` khi dựng màn hình đó.
+1. **Đọc** [layout-guide.md](layout-guide.md), `srs/_design-tokens.json`, `srs/09-ui-ux/01-design-system.md`, `04-states-responsive.md` (9.12), `02-navigation-sitemap.md`, `03-screen-inventory.md`, `srs/_registry.json` (screens, documents, roles), `srs/_permissions.json`. Mở `screens/<slug>.md` khi dựng màn hình đó.
 2. **`assets/js/components.js`** — thư viện component (mục 5).
 3. **`components.html`** — style guide (mục 6). Mở được độc lập, dùng chính `components.js`.
-4. **`assets/js/layout.js`** — `AppShell` theo menu 9.6 (sidebar thu gọn được + drawer trên mobile, topbar, breadcrumb, `RoleSwitcher`, `UserMenu`, `DemoBanner` "Bản demo — dữ liệu giả").
+4. **`assets/js/layout.js`** — `AppShell` theo menu 9.6 (sidebar thu gọn được + drawer trên mobile, topbar, breadcrumb, `RoleSwitcher`, `UserMenu`, `DemoBanner` "Demo — sample data").
 5. **`assets/js/mock-data/<module>.js`** + **`assets/js/app.js`** (mục 7).
 6. **`index.html`** (đăng nhập giả + chọn vai trò, mục 7.1), rồi **từng màn hình** theo thứ tự module trong 03-screen-inventory.
 7. **`README.md`** (danh sách trang: `File | Mã SCR | Tên | Vai trò`; cách chạy; giới hạn của bản demo). `HANDOFF.md` do tool sinh, không viết.
@@ -129,7 +134,7 @@ Trang dùng `AppShell` đơn giản với mục lục bên trái, gồm:
   - Đầu `Layout.mount`: `if (!Perm.guard())` → chưa có vai trò thì đã tự chuyển về `index.html`; có vai trò nhưng không được vào → render khung + `UI.noPermission()` (tiêu đề "Không có quyền truy cập", mô tả vai trò hiện tại, nút "Về trang của tôi" → `Perm.home()`).
   - **Menu sidebar** chỉ hiện mục mà `Perm.canOpen(screenId)` đúng; nhóm menu rỗng thì ẩn.
   - **Topbar** có `RoleSwitcher` (dropdown vai trò, hiển thị tên + người dùng demo): đổi → `Perm.setRole(id)`; nếu trang hiện tại không được vào → `location.href = Perm.home()`, ngược lại `location.reload()`. `UserMenu` có "Đặt lại dữ liệu demo" (`UI.confirm` → `DemoStore.reset()` → reload) và "Đăng xuất" (`Perm.logout()`).
-  - `DemoBanner` "Bản demo — dữ liệu giả" luôn hiện.
+  - `DemoBanner` "Demo — sample data" luôn hiện.
 - **Nút / cột / mục theo quyền:** gắn `data-permission="SALES.ORDER.APPROVE"` (mã quyền = `<resource>.<ACTION>` trong đặc tả màn hình). `Perm` tự gỡ phần tử không có quyền, kể cả phần tử render sau. Muốn hiện nhưng làm mờ: thêm `data-permission-mode="disable"`. Logic JS thì dùng `Perm.can(code)`.
 - **Phạm vi dữ liệu:** danh sách lọc theo `Perm.scope('SALES.ORDER')`: `own` → chỉ bản ghi có `ownerId` = người dùng demo của vai trò; `team` / `branch` → cùng `teamId` / `branchId`; `all` → tất cả. Ghi rõ phạm vi đang xem trên `PageHeader` (ví dụ "Đơn của tôi").
 
@@ -139,7 +144,7 @@ Trang dùng `AppShell` đơn giản với mục lục bên trái, gồm:
 - `mock-data/<module>.js`: chứng từ của module. Mỗi chứng từ có vòng đời: `{ id, code, state, history: [...], ownerId, ... }` — `code` đúng quy tắc đánh mã (`WORKFLOWS[docId].numbering`), `state` là mã trạng thái trong `WORKFLOWS`, `history` có các bước hợp lệ dẫn tới trạng thái hiện tại.
 - **Khớp giữa các module:** khóa ngoại trỏ tới bản ghi có thật (`customerId` ∈ `MOCK.customers`, dòng hàng `productId` ∈ `MOCK.products`; tổng tiền = Σ dòng hàng; tồn kho / công nợ khớp chứng từ đã duyệt theo `_integration.md`).
 - Đủ nhiều để thấy phân trang: 30–100 dòng cho danh sách chính; trạng thái chứng từ phân bố đều để thấy mọi badge.
-- Chân thực theo ngành, tiếng Việt, VNĐ, tên / địa chỉ Việt Nam; ngày trong 3 tháng gần nhất.
+- Chân thực theo ngành, **viết tiếng Anh** (tên người, công ty, sản phẩm, địa chỉ, ghi chú, mô tả — tránh lỗi phông tiếng Việt); tiền VNĐ dạng `1,250,000 ₫`; ngày trong 3 tháng gần nhất.
 - Trang đọc / ghi qua `DemoStore` (không sửa thẳng `MOCK`): `DemoStore.list('salesOrders')`, `DemoStore.update('salesOrders', id, patch)`, `DemoStore.insert(...)`.
 
 ### 7.3. Xử lý giả theo vòng đời chứng từ
@@ -150,7 +155,7 @@ Trang dùng `AppShell` đơn giản với mục lục bên trái, gồm:
 - Tạo chứng từ mới: `code = Workflow.nextCode(docId, codes hiện có)`, `state = Workflow.initial(docId)`, `history` có dòng "Tạo mới".
 - Tác động liên module khi chuyển trạng thái (theo `_integration.md`), ví dụ duyệt đơn bán → giảm tồn kho khả dụng: cập nhật bản ghi liên quan qua `DemoStore` và toast nêu rõ tác động.
 - Loading giả (skeleton ~400ms), trạng thái rỗng / lỗi / thành công đúng như đặc tả. Nút chưa mô phỏng → toast "Tính năng sẽ có ở bản chính thức".
-- Luôn có dải "Bản demo — dữ liệu giả".
+- Luôn có dải "Demo — sample data".
 
 ### 7.4. Website / thương mại điện tử
 
@@ -158,6 +163,6 @@ Không có đăng nhập chọn vai trò trừ khi SRS có khu quản trị (khi
 
 ## 8. Chất lượng
 
-- Responsive theo đặc tả mỗi màn hình: không tràn ngang ở 375px; sidebar thành drawer dưới `lg`; bảng thành thẻ dưới `md`.
+- **Bố cục và responsive theo [layout-guide.md](layout-guide.md)** (bắt buộc đọc trước khi viết `layout.js`): vùng nội dung lấp hết bề ngang cạnh sidebar (giới hạn bằng `max-w-content`, không thêm `max-w-*` hẹp hơn), lưới thêm cột ở `xl/2xl`, không tràn ngang ở 375px; sidebar thành drawer dưới `lg`; bảng thành thẻ dưới `md`. QA đo ở 1920px, nội dung dưới 72% bề ngang bị báo "Bố cục dồn giữa".
 - Accessibility: label cho mọi input, `alt` cho ảnh, `aria-label` cho nút chỉ có icon, tương phản đạt AA, focus thấy rõ.
 - Code sạch, comment ngắn đầu mỗi file / hàm quan trọng; tên hàm, class dễ hiểu để chuyển sang framework.

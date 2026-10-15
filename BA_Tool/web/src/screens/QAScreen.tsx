@@ -13,6 +13,8 @@ interface Props {
   onFinish: (mode: FinishMode) => Promise<void>;
 }
 
+// Luồng chuẩn: một bộ ≤ 10 câu, không có vòng bổ sung; câu bỏ qua được AI tự đề xuất
+
 type Status = 'answered' | 'skipped' | 'todo';
 
 function statusOf(a: Answer | undefined): Status {
@@ -164,7 +166,9 @@ export function QAScreen({ project, phase, onFinish }: Props) {
     return { g, items, done, matches };
   });
 
-  const phaseLabel = phase === 'business' ? 'nghiệp vụ' : 'giao diện';
+  const standard = project.flow === 'standard';
+  const phaseLabel = standard ? '' : phase === 'business' ? 'nghiệp vụ' : 'giao diện';
+  const unknownTag = standard ? '[ĐỀ XUẤT]' : '[CẦN XÁC NHẬN]';
 
   return (
     <div className="flex flex-col gap-6 lg:flex-row">
@@ -308,7 +312,7 @@ export function QAScreen({ project, phase, onFinish }: Props) {
             )}
             {a?.status === 'skipped' && (
               <p className="mt-3 inline-block rounded-lg bg-amber-50 px-3 py-1 text-sm text-amber-800">
-                Đã đánh dấu “Chưa rõ” — sẽ ghi [CẦN XÁC NHẬN] trong SRS. Nhập câu trả lời để bỏ đánh dấu.
+                Đã đánh dấu “Chưa rõ” — {standard ? 'AI sẽ tự đề xuất và ghi [ĐỀ XUẤT]' : 'sẽ ghi [CẦN XÁC NHẬN]'} trong SRS. Nhập câu trả lời để bỏ đánh dấu.
               </p>
             )}
 
@@ -368,8 +372,10 @@ export function QAScreen({ project, phase, onFinish }: Props) {
 
       <ConfirmDialog
         open={confirm}
-        title={`Kết thúc phần câu hỏi ${phaseLabel}?`}
-        confirmLabel={followupDone ? (phase === 'business' ? 'Tạo SRS nghiệp vụ' : 'Bổ sung SRS giao diện') : 'Rà soát & hỏi bổ sung'}
+        title={`Kết thúc phần câu hỏi${phaseLabel && ` ${phaseLabel}`}?`}
+        confirmLabel={
+          standard ? 'Viết SRS (nghiệp vụ + giao diện)' : followupDone ? (phase === 'business' ? 'Tạo SRS nghiệp vụ' : 'Bổ sung SRS giao diện') : 'Rà soát & hỏi bổ sung'
+        }
         onCancel={() => setConfirm(false)}
         onConfirm={() => void finish(followupDone ? 'srs' : 'followup')}
         secondaryLabel={followupDone ? undefined : 'Bỏ qua, tạo SRS luôn'}
@@ -385,13 +391,17 @@ export function QAScreen({ project, phase, onFinish }: Props) {
         {counts.skipped + counts.todo > 0 ? (
           <p className="mt-2">
             Còn <b className="text-amber-700">{counts.skipped + counts.todo} câu</b> bỏ qua hoặc chưa trả lời. Những câu này sẽ được
-            ghi <span className="tag-confirm">[CẦN XÁC NHẬN]</span> trong SRS để bạn hỏi lại khách hàng sau.
+            {' '}{standard ? 'AI tự đề xuất, ghi' : 'ghi'} <span className={standard ? 'tag-propose' : 'tag-confirm'}>{unknownTag}</span> trong SRS để bạn hỏi lại khách hàng sau.
           </p>
         ) : (
           <p className="mt-2">Tất cả câu hỏi đã có câu trả lời.</p>
         )}
         {followupDone ? (
-          <p className="mt-2">AI sẽ mất vài phút để viết tài liệu.</p>
+          <p className="mt-2">
+            {standard
+              ? 'AI viết toàn bộ SRS (nghiệp vụ, đặc tả giao diện, design tokens) trong một lượt — mất khoảng 10–20 phút.'
+              : 'AI sẽ mất vài phút để viết tài liệu.'}
+          </p>
         ) : (
           <p className="mt-2">
             <b>Khuyên dùng:</b> AI rà toàn bộ câu trả lời, tìm chỗ thiếu, mơ hồ hoặc mâu thuẫn và đặt tối đa 15 câu hỏi bổ sung. Bạn

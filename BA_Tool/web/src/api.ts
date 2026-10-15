@@ -2,11 +2,14 @@
 import type {
   Answer,
   AuthStatus,
+  Concept,
   DirListing,
   FileDiff,
   Finding,
+  Flow,
   JobKind,
   Phase,
+  PresetSummary,
   Project,
   ProjectType,
   QaReport,
@@ -38,13 +41,14 @@ export const api = {
   recheckAuth: () => call<AuthStatus>('/api/auth-status/recheck', { method: 'POST' }),
   retryJob: (slug: string) => call<{ jobId: string }>(`/api/projects/${slug}/jobs/retry`, { method: 'POST' }),
   listProjects: () => call<Project[]>('/api/projects'),
-  createProject: (name: string, projectType: ProjectType) =>
-    call<Project>('/api/projects', json('POST', { name, projectType })),
+  createProject: (name: string, flow: Flow, projectType?: ProjectType) =>
+    call<Project>('/api/projects', json('POST', { name, flow, projectType })),
   getProject: (slug: string) => call<Project>(`/api/projects/${slug}`),
   setScreen: (slug: string, screen: Screen) => call<Project>(`/api/projects/${slug}/screen`, json('POST', { screen })),
-  submitRequest: (slug: string, request: string) =>
-    call<{ jobId: string }>(`/api/projects/${slug}/request`, json('POST', { request })),
-  startJob: (slug: string, kind: JobKind, opts: { targetDir?: string; findingId?: string } = {}) =>
+  submitRequest: (slug: string, request: string, concept?: Concept) =>
+    call<{ jobId: string }>(`/api/projects/${slug}/request`, json('POST', { request, concept })),
+  listPresets: () => call<PresetSummary[]>('/api/presets'),
+  startJob: (slug: string, kind: JobKind, opts: { targetDir?: string; findingId?: string; feedback?: string; section?: string } = {}) =>
     call<{ jobId: string }>(`/api/projects/${slug}/jobs`, json('POST', { kind, ...opts })),
   getQa: (slug: string) => call<QaReport | null>(`/api/projects/${slug}/qa`),
   getReview: (slug: string) => call<Review | null>(`/api/projects/${slug}/review`),

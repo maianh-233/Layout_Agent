@@ -1,5 +1,6 @@
 // Schema zod cho bộ câu hỏi do AI sinh và dữ liệu dự án.
 import { z } from 'zod';
+import type { Concept } from './presets.js';
 
 /** Câu hỏi rẽ nhánh: chỉ hiện khi câu `questionId` được chọn một trong các đáp án `includes`. */
 export const ShowIfSchema = z.object({
@@ -76,6 +77,13 @@ export const FollowupSetSchema = z
     });
   });
 
+/** Luồng chuẩn (flow standard): một bộ câu hỏi gộp nghiệp vụ + giao diện, tối đa 10 câu. */
+export const MAX_STANDARD_QUESTIONS = 10;
+export const StandardQuestionSetSchema = QuestionSetSchema.superRefine((set, ctx) => {
+  const n = set.groups.reduce((s, g) => s + g.questions.length, 0);
+  if (n > MAX_STANDARD_QUESTIONS) ctx.addIssue({ code: 'custom', message: `Tối đa ${MAX_STANDARD_QUESTIONS} câu hỏi, đang có ${n} — gộp ý hoặc bỏ câu ít ảnh hưởng tới prototype` });
+});
+
 export type Question = z.infer<typeof QuestionSchema>;
 export type QuestionSet = z.infer<typeof QuestionSetSchema>;
 
@@ -147,6 +155,15 @@ export const usesRegistry = (p: { projectType?: ProjectType }) => p.projectType 
 /** CRM/ERP/quản lý: hệ thống lớn, cần nhiều bước AI hơn. */
 export const isLargeSystem = (t: ProjectType) => t === 'crm' || t === 'erp' || t === 'management-generic';
 
+/**
+ * Luồng làm việc của dự án:
+ *   quick    — Landing page: mô tả → prototype ngay, không viết SRS
+ *   standard — tối đa 10 câu hỏi → một lượt viết SRS gộp (nghiệp vụ + giao diện) → prototype
+ * Dự án tạo trước khi có trường này (không có flow) giữ luồng cũ hai giai đoạn.
+ */
+export const FLOWS = ['quick', 'standard'] as const;
+export type Flow = (typeof FLOWS)[number];
+
 /** Màn hình hiện tại của dự án — dùng để "Mở tiếp" đúng chỗ. */
 export type Screen = 'request' | 'business-qa' | 'business-review' | 'ui-qa' | 'ui-review' | 'prototype' | 'done';
 
@@ -162,6 +179,12 @@ export const JOB_KINDS = [
   'prototype',
   'prototype-qa',
   'prototype-fix',
+  // Luồng chuẩn (flow standard)
+  'questions',
+  'srs',
+  // Chế độ nhanh (flow quick)
+  'quick-prototype',
+  'quick-revise',
 ] as const;
 export type JobKind = (typeof JOB_KINDS)[number];
 
@@ -180,6 +203,8 @@ export interface Project {
   name: string;
   /** Không có ở dự án cũ — dùng projectTypeOf() để đọc */
   projectType?: ProjectType;
+  /** Không có ở dự án cũ (luồng hai giai đoạn) */
+  flow?: Flow;
   createdAt: string;
   updatedAt: string;
   screen: Screen;
@@ -198,7 +223,11 @@ export interface Project {
   versions?: { id: string; createdAt: string; note: string }[];
   /** Tóm tắt QA prototype gần nhất (chi tiết ở <prototype>/_qa/report.json) */
   qa?: { createdAt: string; critical: number; major: number; minor: number; screenshots: number; error?: string };
-  prototype: { dir: string | null; builtAt: string | null; pages: string[] };
+  prototype: { dir: string | null; builtAt: string | null; pages: string[]; /** id section của index.html (chế độ nhanh) */ sections?: string[] };
+  /** Chế độ nhanh: định hướng thiết kế BA chọn (preset, mức chuyển động, section, mood) — xem presets.ts */
+  concept?: Concept;
+  /** Chế độ nhanh: các lần BA yêu cầu sửa landing page */
+  revisions?: { createdAt: string; text: string }[];
   /** Tác vụ AI đang chạy hoặc vừa kết thúc */
   job: {
     id: string;
@@ -213,6 +242,10 @@ export interface Project {
     targetDir?: string;
     /** Lỗi rà soát cần sửa (tác vụ srs-fix) */
     findingId?: string;
+    /** Góp ý cần sửa (tác vụ quick-revise) */
+    feedback?: string;
+    /** Chỉ sửa trong section này (id, tác vụ quick-revise) */
+    section?: string;
   } | null;
 }
 

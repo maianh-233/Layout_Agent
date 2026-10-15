@@ -3,12 +3,14 @@ import fs from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { WORKSPACE_DIR } from './config.js';
+import { renderConcept } from './presets.js';
 import {
   OTHER,
   PROJECT_TYPE_LABELS,
   projectTypeOf,
   visibleQuestionIds,
   type Answer,
+  type Flow,
   type Phase,
   type Project,
   type ProjectType,
@@ -44,6 +46,9 @@ export const srsDir = (slug: string) => path.join(projectDir(slug), 'srs');
 
 /** Bản nháp khi AI sửa một lỗi rà soát: _fix/srs (+ request / answers để AI tra cứu) */
 export const fixDir = (slug: string) => path.join(projectDir(slug), '_fix');
+
+/** Chế độ nhanh: prototype nằm ngay trong dự án (không cần chọn folder) */
+export const quickPrototypeDir = (slug: string) => path.join(projectDir(slug), 'prototype');
 
 const projectFile = (slug: string) => path.join(projectDir(slug), 'project.json');
 
@@ -85,7 +90,7 @@ export async function updateProject(slug: string, fn: (p: Project) => void | Pro
   return saveProject(p);
 }
 
-export async function createProject(name: string, projectType: ProjectType): Promise<Project> {
+export async function createProject(name: string, projectType: ProjectType, flow: Flow): Promise<Project> {
   await fs.mkdir(WORKSPACE_DIR, { recursive: true });
   const base = slugify(name);
   let slug = base;
@@ -95,7 +100,9 @@ export async function createProject(name: string, projectType: ProjectType): Pro
   const p: Project = {
     slug,
     name: name.trim(),
-    projectType,
+    // Chế độ nhanh chỉ dành cho landing page
+    projectType: flow === 'quick' ? 'website' : projectType,
+    flow,
     createdAt: now,
     updatedAt: now,
     screen: 'request',
@@ -112,19 +119,24 @@ export async function createProject(name: string, projectType: ProjectType): Pro
 /** Ghi yêu cầu ban đầu ra request.md để skill đọc. */
 export async function writeRequestFile(p: Project) {
   const type = projectTypeOf(p);
+  const label = p.flow === 'quick' ? 'Landing page — chế độ nhanh (không có SRS)' : `${PROJECT_TYPE_LABELS[type]} (\`${type}\`)`;
   await fs.writeFile(
     path.join(projectDir(p.slug), 'request.md'),
-    `# Yêu cầu ban đầu của BA\n\nLoại dự án: ${PROJECT_TYPE_LABELS[type]} (\`${type}\`)\n\n${p.request}\n`,
+    `# Yêu cầu ban đầu của BA\n\nLoại dự án: ${label}\n\n${p.request}\n`,
     'utf8',
   );
+  // Chế độ nhanh: mô tả + preset + mức chuyển động + section trong một file — AI đọc file này thay cho request.md
+  if (p.flow === 'quick') await fs.writeFile(path.join(projectDir(p.slug), 'concept.md'), renderConcept(p.request, p.concept), 'utf8');
 }
 
-function formatAnswer(a: Answer | undefined): string {
-  if (!a || a.status === 'skipped') return '**Chưa rõ / Bỏ qua** → cần ghi [CẦN XÁC NHẬN]';
+/** Luồng chuẩn hỏi ít câu nên câu bỏ qua được AI tự đề xuất; luồng cũ ghi [CẦN XÁC NHẬN]. */
+function formatAnswer(a: Answer | undefined, propose = false): string {
+  const unknown = propose ? '**Chưa rõ / Bỏ qua** → tự đề xuất hợp lý, gắn [ĐỀ XUẤT] + ghi 13.9' : '**Chưa rõ / Bỏ qua** → cần ghi [CẦN XÁC NHẬN]';
+  if (!a || a.status === 'skipped') return unknown;
   const vals = Array.isArray(a.value) ? a.value : [a.value];
   const parts = vals.filter((v) => v && v !== OTHER);
   if (a.other?.trim()) parts.push(`Khác: ${a.other.trim()}`);
-  return parts.length ? parts.join('; ') : '**Chưa rõ / Bỏ qua** → cần ghi [CẦN XÁC NHẬN]';
+  return parts.length ? parts.join('; ') : unknown;
 }
 
 /**
@@ -135,10 +147,12 @@ function formatAnswer(a: Answer | undefined): string {
 export async function writeAnswersFile(p: Project, phase: Phase) {
   const st = p[phase];
   if (!st.questions) throw new HttpError(400, 'Chưa có bộ câu hỏi');
-  const title = phase === 'business' ? 'nghiệp vụ' : 'giao diện';
+  const title = p.flow === 'standard' ? 'của khách' : phase === 'business' ? 'nghiệp vụ' : 'giao diện';
   const visible = visibleQuestionIds(st.questions, st.answers);
   const byId = new Map(st.questions.groups.flatMap((g) => g.questions).map((q) => [q.id, q]));
   let md = `# Câu trả lời ${title} — ${p.name}\n\n`;
+  if (p.flow === 'standard')
+    md += '> Chỉ hỏi những điểm quyết định prototype. Phần khách chưa nói: tự bổ sung hợp lý theo ngành, gắn `[ĐỀ XUẤT]`.\n';
   md +=
     '> Ghi chú BA là nhận xét nội bộ: dùng để biết chỗ nào cần `[CẦN XÁC NHẬN]` / 13.9, không chép nguyên văn vào SRS.\n' +
     '> "Không áp dụng" = câu bị ẩn vì khách không chọn phần liên quan — không đưa phần đó vào SRS.\n\n';
@@ -158,7 +172,7 @@ export async function writeAnswersFile(p: Project, phase: Phase) {
       }
       const a = st.answers[q.id];
       if (!a || a.status === 'skipped') skipped++;
-      md += `  - Trả lời: ${formatAnswer(a)}\n`;
+      md += `  - Trả lời: ${formatAnswer(a, p.flow === 'standard')}\n`;
       const note = st.notes?.[q.id]?.trim();
       if (note) md += `  - Ghi chú BA (nội bộ): ${note.replace(/\s*\n\s*/g, ' / ')}\n`;
     }

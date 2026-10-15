@@ -20,14 +20,23 @@ import {
   writeAnswersFile,
   writeRequestFile,
 } from './projects.js';
-import { FollowupSetSchema, QuestionSetSchema, projectTypeOf, usesRegistry, type JobKind, type Phase, type Project } from './schemas.js';
+import { FollowupSetSchema, QuestionSetSchema, StandardQuestionSetSchema, projectTypeOf, usesRegistry, type JobKind, type Phase, type Project } from './schemas.js';
 import { checkRegistry, writeGenerated } from './registry.js';
 import { checkDesignTokens } from './design.js';
 import { REVIEW_AI, buildReview, codeReview, readAiReview, readReview, reviewSummary, writeReview } from './review.js';
 import { diffDirs, listAll } from './versions.js';
-import { listPages, scanHardcoded, writeFoundation } from './prototype-assets.js';
+import { listPages, listSections, scanHardcoded, writeAtmos, writeFoundation, writeMotion, writeUi } from './prototype-assets.js';
 import { writeRuntime } from './prototype-runtime.js';
-import { qaSummary, runQa } from './qa.js';
+import { QA_JSON, qaSummary, runQa, type QaReport } from './qa.js';
+import { detectPreset, presetById } from './presets.js';
+
+/** Tên preset sẽ dùng (BA chọn, hoặc tool nhận diện từ mô tả) — hiện trong tiến độ. */
+function conceptLabel(p: Project): string {
+  const chosen = p.concept?.preset && p.concept.preset !== 'auto' ? presetById(p.concept.preset) : undefined;
+  const preset = chosen ?? detectPreset(`${p.request} ${p.concept?.mood ?? ''}`);
+  const motion = p.concept?.motion && p.concept.motion !== 'auto' ? p.concept.motion : preset?.motion;
+  return `${preset ? preset.name : 'AI tự chọn preset'}${chosen || !preset ? '' : ' (tự nhận diện)'}${motion ? ` · chuyển động Level ${motion}` : ''}`;
+}
 
 export type JobEvent =
   | AgentEvent
@@ -88,6 +97,10 @@ export function reconcileJob(p: Project): Project {
 export interface JobParams {
   targetDir?: string;
   findingId?: string;
+  /** quick-revise: góp ý của BA; để trống = sửa theo báo cáo QA */
+  feedback?: string;
+  /** quick-revise: chỉ sửa trong section có id này (để trống = toàn trang) */
+  section?: string;
 }
 
 export async function startJob(slug: string, kind: JobKind, params: JobParams = {}): Promise<string> {
@@ -97,7 +110,7 @@ export async function startJob(slug: string, kind: JobKind, params: JobParams = 
   const job: Job = { id: randomUUID(), slug, kind, status: 'running', events: [], clients: new Set(), abort: new AbortController() };
   jobs.set(job.id, job);
   await updateProject(slug, (pr) => {
-    pr.job = { id: job.id, kind, status: 'running', targetDir: params.targetDir, findingId: params.findingId };
+    pr.job = { id: job.id, kind, status: 'running', targetDir: params.targetDir, findingId: params.findingId, feedback: params.feedback, section: params.section };
   });
 
   // Chạy nền, không chờ
@@ -105,7 +118,7 @@ export async function startJob(slug: string, kind: JobKind, params: JobParams = 
     async () => {
       job.status = 'done';
       await updateProject(slug, (pr) => {
-        pr.job = { id: job.id, kind, status: 'done', targetDir: params.targetDir, findingId: params.findingId };
+        pr.job = { id: job.id, kind, status: 'done', targetDir: params.targetDir, findingId: params.findingId, feedback: params.feedback, section: params.section };
       });
       emit(job, { type: 'status', status: 'done' });
       closeClients(job);
@@ -117,7 +130,7 @@ export async function startJob(slug: string, kind: JobKind, params: JobParams = 
       job.status = 'error';
       // Chỉ ghi trạng thái tác vụ — câu trả lời, màn hình hiện tại và các file đã có được giữ nguyên
       await updateProject(slug, (pr) => {
-        pr.job = { id: job.id, kind, status: 'error', error: message, errorCode, resetsAt, targetDir: params.targetDir, findingId: params.findingId };
+        pr.job = { id: job.id, kind, status: 'error', error: message, errorCode, resetsAt, targetDir: params.targetDir, findingId: params.findingId, feedback: params.feedback, section: params.section };
       }).catch(() => {});
       emit(job, { type: 'status', status: 'error', error: message, errorCode });
       closeClients(job);
@@ -133,7 +146,7 @@ export async function retryLastJob(slug: string): Promise<string> {
   // Vòng bổ sung đã xong (không có câu nào) nhưng lỗi lúc viết SRS → chỉ chạy lại phần viết SRS
   if (p.job.kind === 'business-followup' && p.business.followupStatus) return startJob(slug, 'business-srs');
   if (p.job.kind === 'ui-followup' && p.ui.followupStatus) return startJob(slug, 'ui-srs');
-  return startJob(slug, p.job.kind, { targetDir: p.job.targetDir, findingId: p.job.findingId });
+  return startJob(slug, p.job.kind, { targetDir: p.job.targetDir, findingId: p.job.findingId, feedback: p.job.feedback, section: p.job.section });
 }
 
 function closeClients(job: Job) {
@@ -253,17 +266,24 @@ async function runJob(job: Job, params: JobParams) {
   /** QA prototype bằng Playwright (không dùng AI) + HANDOFF.md. failSoft: lỗi QA không làm hỏng tác vụ dựng. */
   const runQaStep = async ({ failSoft }: { failSoft: boolean }) => {
     const target = params.targetDir!;
-    emit(job, { type: 'step', text: 'QA tự động: mở từng trang ở 375 / 768 / 1440px, kiểm lỗi, đăng nhập từng vai trò…' });
+    emit(job, {
+      type: 'step',
+      text: loaded.flow === 'quick'
+        ? 'QA tự động: mở từng trang ở 375 / 768 / 1440 / 1920px, kiểm lỗi, tràn ngang, bố cục dồn giữa…'
+        : 'QA tự động: mở từng trang ở 375 / 768 / 1440px, kiểm lỗi, đăng nhập từng vai trò…',
+    });
     try {
+      const quick = loaded.flow === 'quick';
       const report = await runQa({
         target,
-        srs: srsDir(job.slug),
+        srs: quick ? undefined : srsDir(job.slug),
         appName: loaded.name,
+        quick,
         onProgress: (text) => emit(job, { type: 'step', text }),
       });
       const sum = qaSummary(report);
       await updateProject(job.slug, (pr) => void (pr.qa = sum));
-      emit(job, { type: 'step', text: `QA xong: ${sum.critical} nghiêm trọng, ${sum.major} cần sửa, ${sum.minor} gợi ý · ${sum.screenshots} ảnh chụp · đã cập nhật HANDOFF.md.` });
+      emit(job, { type: 'step', text: `QA xong: ${sum.critical} nghiêm trọng, ${sum.major} cần sửa, ${sum.minor} gợi ý · ${sum.screenshots} ảnh chụp${quick ? '' : ' · đã cập nhật HANDOFF.md'}.` });
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e);
       if (!failSoft) throw e;
@@ -272,12 +292,118 @@ async function runJob(job: Job, params: JobParams) {
     }
   };
 
+  /** Prototype vừa dựng / sửa: ghi danh sách trang rồi QA (không chặn kết quả nếu QA lỗi). */
+  const afterBuild = async (target: string) => {
+    const pages = await listPages(target);
+    if (!pages.includes('index.html')) throw new Error('AI chưa tạo index.html trong folder prototype. Hãy thử chạy lại.');
+    const sections = loaded.flow === 'quick' ? await listSections(target) : undefined;
+    await updateProject(job.slug, (pr) => {
+      pr.prototype = { dir: target, builtAt: new Date().toISOString(), pages, ...(sections ? { sections } : {}) };
+      pr.screen = 'done';
+    });
+    emit(job, { type: 'step', text: `Đã dựng ${pages.length} trang.` });
+    await runQaStep({ failSoft: true });
+  };
+
   switch (job.kind) {
+    // ---------- Chế độ nhanh: landing page, không có SRS ----------
+    case 'quick-prototype': {
+      await writeRequestFile(await loadProject(job.slug));
+      await fs.mkdir(params.targetDir!, { recursive: true });
+      await writeMotion(params.targetDir!);
+      await writeUi(params.targetDir!);
+      await writeAtmos(params.targetDir!);
+      const p = await loadProject(job.slug);
+      emit(job, { type: 'step', text: `Concept: ${conceptLabel(p)}. AI đang dựng landing page (motion.js + ui.js + atmos.js có sẵn), rồi tự chụp màn hình để rà và sửa…` });
+      await run();
+      await afterBuild(params.targetDir!);
+      return;
+    }
+
+    case 'quick-revise': {
+      let text = params.feedback?.trim() ?? '';
+      if (!text) {
+        // Không có góp ý → sửa theo báo cáo QA gần nhất
+        const file = path.join(params.targetDir!, QA_JSON);
+        const report = existsSync(file) ? (JSON.parse(await fs.readFile(file, 'utf8')) as QaReport) : null;
+        const issues = report?.issues.filter((i) => i.severity !== 'minor' || i.category === 'Bố cục dồn giữa') ?? [];
+        if (!issues.length) throw new Error('Không có góp ý và báo cáo QA không còn lỗi cần sửa.');
+        text = 'Sửa các lỗi QA tự động phát hiện:\n' + issues.map((i) => `- [${i.category}] ${i.page ?? ''}${i.viewport ? ` (${i.viewport})` : ''}: ${i.message}`).join('\n');
+      }
+      const scope = params.section?.trim();
+      // Phạm vi một section: AI chỉ đọc / sửa / chụp lại khối đó — nhanh hơn nhiều so với cả trang
+      const scopeLine = scope
+        ? `\n## Phạm vi\n\nCHỈ sửa section \`#${scope}\` trong index.html (kèm CSS / JS riêng của khối nếu cần). Không đổi các section khác.\n`
+        : '';
+      await fs.writeFile(path.join(dir, 'feedback.md'), `# Góp ý cần sửa\n${scopeLine}\n${text}\n`, 'utf8');
+      await writeMotion(params.targetDir!);
+      await writeUi(params.targetDir!);
+      await writeAtmos(params.targetDir!);
+      emit(job, { type: 'step', text: scope ? `AI đang sửa section #${scope} theo góp ý…` : 'AI đang sửa landing page theo góp ý (có chụp màn hình kiểm lại)…' });
+      await run();
+      await updateProject(job.slug, (pr) => {
+        const t = params.feedback?.trim() || 'Sửa theo báo cáo QA';
+        pr.revisions = [...(pr.revisions ?? []), { createdAt: new Date().toISOString(), text: scope ? `[#${scope}] ${t}` : t }];
+      });
+      await afterBuild(params.targetDir!);
+      return;
+    }
+
+    // ---------- Luồng chuẩn: tối đa 10 câu hỏi → SRS gộp ----------
+    case 'questions': {
+      await writeRequestFile(await loadProject(job.slug));
+      emit(job, { type: 'step', text: 'Đang soạn tối đa 10 câu hỏi then chốt…' });
+      await fs.rm(path.join(dir, 'questions-business.json'), { force: true });
+      await run();
+      let parsed = await validateQuestions(job.slug, 'business', 'questions', StandardQuestionSetSchema);
+      if (!parsed.ok) {
+        emit(job, { type: 'step', text: 'Bộ câu hỏi sai định dạng, đang yêu cầu AI sửa lại (lần 2)…' });
+        await run(
+          `LẦN TRƯỚC FILE questions-business.json KHÔNG HỢP LỆ:\n${parsed.error}\n` +
+            `Chỉ sửa lại file đó (tối đa 10 câu, đúng định dạng JSON trong references/question-guide.md).`,
+        );
+        parsed = await validateQuestions(job.slug, 'business', 'questions', StandardQuestionSetSchema);
+        if (!parsed.ok) throw new Error(`AI trả về bộ câu hỏi sai định dạng sau 2 lần thử:\n${parsed.error}`);
+      }
+      const set = parsed.value;
+      await updateProject(job.slug, (pr) => {
+        pr.business = { questions: set, answers: {}, currentIndex: 0, followupStatus: 'skipped' };
+        pr.screen = 'business-qa';
+      });
+      emit(job, { type: 'step', text: `Đã tạo ${set.groups.reduce((s, g) => s + g.questions.length, 0)} câu hỏi.` });
+      return;
+    }
+
+    case 'srs': {
+      await writeAnswersFile(await loadProject(job.slug), 'business');
+      await fs.mkdir(srsDir(job.slug), { recursive: true });
+      const before = await snapshotSrs(job.slug);
+      emit(job, { type: 'step', text: 'Đang viết SRS gộp (nghiệp vụ + giao diện + design tokens) trong một lượt…' });
+      await runAs('srs');
+      const registryErrors = await finishRegistry('ui', 'srs');
+      const changes = await diffSrs(job.slug, before);
+      const srs = srsDir(job.slug);
+      for (const need of ['README.md', '09-ui-ux/03-screen-inventory.md'])
+        if (!existsSync(path.join(srs, need))) throw new Error(`AI chưa tạo srs/${need}. Hãy thử chạy lại.`);
+      // Chỉ kiểm bằng code (không tốn lượt AI). Rà soát bằng AI: bấm "Rà soát lại" ở tab Rà soát khi cần.
+      const review = buildReview(await codeReview(srs, 'ui'), [], { status: 'skipped' });
+      await writeReview(srs, review);
+      await updateProject(job.slug, (pr) => {
+        pr.srsChanges = changes;
+        pr.screen = 'ui-review';
+        pr.registryErrors = registryErrors;
+        pr.review = reviewSummary(review);
+      });
+      emit(job, { type: 'step', text: `Hoàn tất: ${changes.length} file SRS · kiểm bằng code: ${review.findings.length} vấn đề.` });
+      return;
+    }
+
     case 'prototype-qa':
       await runQaStep({ failSoft: false });
       return;
 
     case 'prototype-fix': {
+      if (srsMode === 'registry') await writeMotion(params.targetDir!);
       emit(job, { type: 'step', text: 'AI đang sửa các lỗi trong báo cáo QA…' });
       await run();
       const pages = await listPages(params.targetDir!);
@@ -430,10 +556,15 @@ ${JSON.stringify(finding, null, 2)}`, draft);
   }
 }
 
-async function validateQuestions(slug: string, phase: Phase, kind: 'questions' | 'followup' = 'questions') {
+async function validateQuestions(
+  slug: string,
+  phase: Phase,
+  kind: 'questions' | 'followup' = 'questions',
+  schema: typeof QuestionSetSchema | typeof FollowupSetSchema | typeof StandardQuestionSetSchema = kind === 'followup' ? FollowupSetSchema : QuestionSetSchema,
+) {
   try {
     const raw = await readQuestionsFile(slug, phase, kind);
-    const r = (kind === 'followup' ? FollowupSetSchema : QuestionSetSchema).safeParse(raw);
+    const r = schema.safeParse(raw);
     if (r.success) return { ok: true as const, value: normalizeQuestions(r.data) };
     const error = r.error.issues
       .slice(0, 15)

@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>The Last Summer Train — a short animated film</title>
+  <meta name="description" content="Every evening at 6:40, Hana waits at Kisaragi Station for a train that stopped running eleven summers ago. A 24-minute animated short.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700;800&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    // Preset "dreamy" — đổi phong cách chỉ cần đổi các token này
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'sky-dawn': '#F6D8C8', 'sky-day': '#A9C6E8', dusk: '#2B3566', night: '#0E1430',
+            ink: '#1E2340', paper: '#FBF7F2', glow: '#FFC98B', sakura: '#E8A6B8',
+          },
+          fontFamily: {
+            display: ['"Shippori Mincho"', 'serif'],
+            body: ['"Zen Kaku Gothic New"', 'system-ui', 'sans-serif'],
+          },
+        },
+      },
+    };
+  </script>
+  <script src="assets/js/ui.js"></script>
+  <style>
+    :root { --ui-accent: #2B3566; }
+    /* Ảnh phong cảnh "tông phim hoạt hình": ấm, rực hơn ảnh chụp gốc một chút */
+    .anime-grade { filter: saturate(1.18) contrast(1.04) sepia(.12); }
+  </style>
+</head>
+<body class="bg-sky-day font-body text-ink antialiased"
+      data-sky="#8FB8E6,#F8E1D2 | #A3C8EE,#FBEFE2 | #E8B9A0,#FFE2BF | #B98FA8,#FFC9A6 | #3A3F78,#C98C93 | #0B1022,#1B2347">
+
+  <div data-scroll-progress class="fixed inset-x-0 top-0 z-[60] h-0.5 origin-left bg-glow"></div>
+
+  <!-- ============ Header ============ -->
+  <header id="top" data-header="hide" class="fixed inset-x-0 top-0 z-50 transition-[background-color,box-shadow,transform] duration-500 [&.is-scrolled]:bg-paper/75 [&.is-scrolled]:shadow-[0_1px_0_rgba(30,35,64,.08)] [&.is-scrolled]:backdrop-blur-md">
+    <div class="mx-auto flex h-16 w-full max-w-screen-2xl items-center justify-between px-4 sm:px-6 lg:h-20 lg:px-10 2xl:px-16">
+      <a href="#hero" class="font-display text-lg font-bold tracking-tight">The Last Summer Train</a>
+      <nav data-scrollspy class="hidden items-center gap-9 text-sm lg:flex" aria-label="Primary">
+        <a href="#story" class="relative py-2 after:absolute after:inset-x-0 after:bottom-0 after:h-px after:origin-right after:scale-x-0 after:bg-current after:transition-transform after:duration-500 after:ease-[cubic-bezier(.16,1,.3,1)] hover:after:origin-left hover:after:scale-x-100 [&.is-active]:after:scale-x-100">Story</a>
+        <a href="#scenes" class="relative py-2 after:absolute after:inset-x-0 after:bottom-0 after:h-px after:origin-right after:scale-x-0 after:bg-current after:transition-transform after:duration-500 after:ease-[cubic-bezier(.16,1,.3,1)] hover:after:origin-left hover:after:scale-x-100 [&.is-active]:after:scale-x-100">Scenes</a>
+        <a href="#tickets" class="relative py-2 after:absolute after:inset-x-0 after:bottom-0 after:h-px after:origin-right after:scale-x-0 after:bg-current after:transition-transform after:duration-500 after:ease-[cubic-bezier(.16,1,.3,1)] hover:after:origin-left hover:after:scale-x-100 [&.is-active]:after:scale-x-100">Screenings</a>
+        <a href="#tickets" class="rounded-full bg-ink px-5 py-2.5 font-medium text-paper transition duration-300 hover:bg-dusk active:scale-[.98]">Reserve a seat</a>
+      </nav>
+      <button type="button" data-menu-toggle="#mnav" class="grid size-11 place-items-center rounded-full lg:hidden" aria-label="Open menu">
+        <svg class="size-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M4 8h16M4 16h16"/></svg>
+      </button>
+    </div>
+    <div id="mnav" data-menu class="fixed inset-x-4 top-20 z-50 rounded-3xl bg-paper p-6 shadow-2xl lg:hidden">
+      <nav class="grid gap-1 font-display text-2xl" aria-label="Mobile">
+        <a href="#story" class="rounded-xl px-3 py-3 hover:bg-sky-dawn/60">Story</a>
+        <a href="#scenes" class="rounded-xl px-3 py-3 hover:bg-sky-dawn/60">Scenes</a>
+        <a href="#tickets" class="rounded-xl px-3 py-3 hover:bg-sky-dawn/60">Screenings</a>
+      </nav>
+      <a href="#tickets" class="mt-4 flex h-12 items-center justify-center rounded-full bg-ink font-medium text-paper">Reserve a seat</a>
+    </div>
+  </header>
+
+  <main>
+    <!-- ============ Hero — cảnh nhiều lớp: trời (body) · nắng · mây · cánh đồng · bụi nắng ============ -->
+    <section id="hero" data-section="hero-scene" class="relative min-h-[100dvh] overflow-hidden">
+      <div data-layers class="absolute inset-0" aria-hidden="true">
+        <div data-depth="0.05" class="absolute inset-x-0 -inset-y-[8%] bg-[radial-gradient(55%_45%_at_72%_58%,rgba(255,201,139,.6),transparent_70%)]"></div>
+        <div data-depth="0.1" data-clouds="3" data-clouds-band="4-52" class="absolute inset-x-0 -inset-y-[8%]"></div>
+        <div data-depth="0.2" class="absolute inset-x-0 -bottom-[10%] top-[58%] lg:top-[54%]">
+          <img src="assets/img/hero-lone-tree.jpg" alt="A single oak tree standing alone in a dry summer field below soft hills"
+               class="anime-grade h-full w-full object-cover object-[35%_72%] [mask-image:linear-gradient(to_bottom,transparent_0%,black_30%)]"
+               width="1600" height="1068" fetchpriority="high">
+        </div>
+      </div>
+      <div data-particles="dust" data-particles-density="0.9" class="pointer-events-none absolute inset-0" aria-hidden="true"></div>
+      <div class="absolute inset-x-0 bottom-0 h-1/4 bg-gradient-to-t from-paper/70 to-transparent" aria-hidden="true"></div>
+
+      <div class="relative z-10 mx-auto flex min-h-[100dvh] w-full max-w-screen-2xl flex-col px-4 pb-10 pt-28 sm:px-6 lg:px-10 lg:pt-32 2xl:px-16">
+        <div class="mx-auto max-w-5xl text-center">
+          <p data-reveal="fade" class="text-[11px] uppercase tracking-[0.35em] text-ink/70 sm:text-xs">A short animated film · 24 min · Summer 2026</p>
+          <h1 data-split="words" class="mt-6 font-display text-[clamp(3rem,9vw,7.25rem)] font-extrabold leading-[0.92] tracking-tight">The Last Summer Train</h1>
+          <p data-reveal="up" data-reveal-delay="500" class="mx-auto mt-7 max-w-xl text-base leading-relaxed text-ink/80 sm:text-lg">
+            Every evening at 6:40, Hana waits at Kisaragi Station for a train that stopped running eleven summers ago.
+          </p>
+          <div data-reveal="up" data-reveal-delay="650" class="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
+            <a href="#tickets" class="inline-flex h-12 w-full items-center justify-center rounded-full bg-ink px-7 font-medium text-paper transition duration-300 hover:-translate-y-0.5 hover:bg-dusk hover:shadow-lg active:scale-[.98] sm:w-auto">Reserve a seat</a>
+            <a href="#story" class="group inline-flex h-12 items-center gap-2 px-4 font-medium text-ink/85 transition hover:text-ink">
+              Read the story
+              <svg class="size-4 transition-transform duration-300 group-hover:translate-y-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v14M6 13l6 6 6-6"/></svg>
+            </a>
+          </div>
+        </div>
+        <div class="mt-auto flex items-end justify-between gap-6 pt-16 text-[11px] uppercase tracking-[0.3em] text-ink/70">
+          <span>Scene 01 — The field, 4:12 pm</span>
+          <span class="hidden sm:inline">Kisaragi, Nagano</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ Story — lá thư của đạo diễn ============ -->
+    <section id="story" data-section="story-letter" class="relative py-28 lg:py-40">
+      <div class="mx-auto grid w-full max-w-screen-2xl gap-14 px-4 sm:px-6 lg:grid-cols-12 lg:gap-10 lg:px-10 2xl:px-16">
+        <div class="lg:col-span-5 lg:col-start-2 lg:self-center">
+          <p data-reveal="fade" class="text-[11px] uppercase tracking-[0.35em] text-ink/60 sm:text-xs">Scene 02 — A note from the director</p>
+          <h2 data-split="words" class="mt-5 font-display text-4xl font-bold leading-[1.05] sm:text-5xl 2xl:text-6xl">Some places keep waiting long after we leave.</h2>
+          <div data-reveal="up" class="mt-8 max-w-prose space-y-5 text-[17px] leading-relaxed text-ink/80">
+            <p class="first-letter:float-left first-letter:mr-3 first-letter:font-display first-letter:text-6xl first-letter:font-bold first-letter:leading-[.8]">I grew up two stops from a station like Kisaragi. When the line closed, nobody took down the timetable. The paint faded, the cicadas got louder, and the platform kept its evening light as if a train might still come.</p>
+            <p>The film is about Hana, seventeen, who spends one last summer there before moving to the city. It is a quiet story: clouds, grass, a radio, a girl who is not ready to say goodbye.</p>
+          </div>
+          <p data-reveal="fade" class="mt-10 font-display text-xl italic">— Rin Okada, director</p>
+        </div>
+
+        <div class="relative lg:col-span-5 lg:col-start-8">
+          <div data-reveal="clip" class="aspect-[4/5] overflow-hidden rounded-[2rem] bg-sky-dawn">
+            <img src="assets/img/girl-field.webp" alt="A young woman seen from behind, her long hair lit by the setting sun over a grass field"
+                 class="anime-grade h-full w-full object-cover object-[30%_50%]" loading="lazy" width="1200" height="1500">
+          </div>
+          <div class="absolute -bottom-10 -left-4 w-32 sm:-left-10 sm:w-44">
+            <figure data-float="9" data-float-rotate="2" class="overflow-hidden rounded-2xl bg-paper p-2 shadow-[0_20px_40px_-20px_rgba(30,35,64,.45)]">
+              <img src="assets/img/dandelion.jpg" alt="A dandelion seed head glowing in low evening sun" class="aspect-[3/4] w-full rounded-xl object-cover" loading="lazy" width="400" height="533">
+              <figcaption class="px-1 pb-1 pt-2 text-[10px] uppercase tracking-[0.25em] text-ink/60">Fig. 1 — July</figcaption>
+            </figure>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ Cảnh ghim theo cuộn — nhà ga lúc chạng vạng ============ -->
+    <section id="journey" data-section="story-pinned" data-scene="320" class="relative text-paper" aria-label="The station at dusk">
+      <div class="grid place-items-center">
+        <img src="assets/img/station-dusk.webp" alt="Railway tracks and signal gantry silhouetted against an orange dusk sky"
+             class="anime-grade absolute inset-0 h-full w-full object-cover" style="transform: scale(calc(1.14 - var(--sp, 0) * .14))" loading="lazy" width="1600" height="1067">
+        <div class="absolute inset-0 bg-gradient-to-b from-night/70 via-dusk/40 to-night/80" aria-hidden="true"></div>
+        <div data-particles="fireflies" data-particles-density="1.2" class="pointer-events-none absolute inset-0" aria-hidden="true"></div>
+        <p class="absolute left-4 top-24 text-[11px] uppercase tracking-[0.35em] text-paper/70 sm:left-10 lg:top-28">Scene 03 — Kisaragi Station, 6:40 pm</p>
+        <div class="relative z-10 grid w-full max-w-4xl px-6 text-center [&>*]:col-start-1 [&>*]:row-start-1">
+          <p data-step="0-0.34" class="font-display text-3xl leading-tight sm:text-5xl lg:text-6xl">The rails still hum at dusk.</p>
+          <p data-step="0.34-0.68" class="font-display text-3xl leading-tight sm:text-5xl lg:text-6xl">She counts cicadas instead of minutes.</p>
+          <p data-step="0.68-1" class="font-display text-3xl leading-tight sm:text-5xl lg:text-6xl">Tonight, for the first time in eleven summers, a light appears on the line.</p>
+        </div>
+        <div class="absolute inset-x-6 bottom-10 mx-auto h-px max-w-xs bg-paper/25 sm:inset-x-10" aria-hidden="true">
+          <div class="h-full origin-left bg-glow" style="transform: scaleX(var(--sp, 0))"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ Scenes — dải phim kéo ngang ============ -->
+    <section id="scenes" data-section="gallery-filmstrip" class="relative py-28 lg:py-36">
+      <div class="mx-auto flex w-full max-w-screen-2xl flex-wrap items-end justify-between gap-6 px-4 sm:px-6 lg:px-10 2xl:px-16">
+        <div>
+          <p data-reveal="fade" class="text-[11px] uppercase tracking-[0.35em] text-ink/60 sm:text-xs">Scene index</p>
+          <h2 data-split="words" class="mt-4 font-display text-4xl font-bold sm:text-5xl 2xl:text-6xl">Frames from the film</h2>
+        </div>
+        <p data-reveal="fade" class="max-w-sm text-ink/75">Every background was painted from photographs taken along the old Kisaragi line. Drag to browse, tap to open.</p>
+      </div>
+      <div data-drag-scroll data-reveal-stagger="90" class="mt-12 flex snap-x snap-mandatory gap-5 overflow-x-auto scroll-px-4 px-4 pb-6 [scrollbar-width:none] sm:scroll-px-6 sm:px-6 lg:scroll-px-10 lg:gap-7 lg:px-10 2xl:px-16 [&::-webkit-scrollbar]:hidden">
+        <figure class="w-[80%] shrink-0 snap-start sm:w-[46%] lg:w-[34%] 2xl:w-[28%]">
+          <a href="assets/img/tracks-mountain.webp" data-lightbox="frames" data-caption="FR. 012 — The line into the hills" class="group block overflow-hidden rounded-3xl bg-sky-dawn">
+            <img src="assets/img/tracks-mountain.webp" alt="Sunlit railway tracks curving between green trees towards mountains" class="anime-grade aspect-[4/5] w-full object-cover transition-transform duration-[1200ms] ease-[cubic-bezier(.16,1,.3,1)] group-hover:scale-[1.04]" loading="lazy" width="800" height="1000">
+          </a>
+          <figcaption class="mt-4 flex gap-4 text-sm"><span class="font-display font-bold">012</span><span class="text-ink/75">The line into the hills — where Hana walks home.</span></figcaption>
+        </figure>
+        <figure class="w-[80%] shrink-0 snap-start sm:w-[46%] lg:w-[34%] 2xl:w-[28%]">
+          <a href="assets/img/summer-cumulus.webp" data-lightbox="frames" data-caption="FR. 047 — The tallest cloud of July" class="group block overflow-hidden rounded-3xl bg-sky-dawn">
+            <img src="assets/img/summer-cumulus.webp" alt="A towering white cumulus cloud in a deep blue summer sky" class="anime-grade aspect-[4/5] w-full object-cover transition-transform duration-[1200ms] ease-[cubic-bezier(.16,1,.3,1)] group-hover:scale-[1.04]" loading="lazy" width="800" height="1000">
+          </a>
+          <figcaption class="mt-4 flex gap-4 text-sm"><span class="font-display font-bold">047</span><span class="text-ink/75">The tallest cloud of July — the afternoon nobody leaves.</span></figcaption>
+        </figure>
+        <figure class="w-[80%] shrink-0 snap-start sm:w-[46%] lg:w-[34%] 2xl:w-[28%]">
+          <a href="assets/img/meadow.jpg" data-lightbox="frames" data-caption="FR. 088 — Lupins after the storm" class="group block overflow-hidden rounded-3xl bg-sky-dawn">
+            <img src="assets/img/meadow.jpg" alt="Purple lupins and yellow wildflowers in a meadow under heavy storm clouds" class="anime-grade aspect-[4/5] w-full object-cover transition-transform duration-[1200ms] ease-[cubic-bezier(.16,1,.3,1)] group-hover:scale-[1.04]" loading="lazy" width="800" height="1000">
+          </a>
+          <figcaption class="mt-4 flex gap-4 text-sm"><span class="font-display font-bold">088</span><span class="text-ink/75">Lupins after the storm — the radio finally finds a station.</span></figcaption>
+        </figure>
+        <figure class="w-[80%] shrink-0 snap-start sm:w-[46%] lg:w-[34%] 2xl:w-[28%]">
+          <a href="assets/img/clouds-dusk.webp" data-lightbox="frames" data-caption="FR. 131 — The sky bruises at evening" class="group block overflow-hidden rounded-3xl bg-sky-dawn">
+            <img src="assets/img/clouds-dusk.webp" alt="Dark violet clouds parting over a band of golden evening light" class="anime-grade aspect-[4/5] w-full object-cover transition-transform duration-[1200ms] ease-[cubic-bezier(.16,1,.3,1)] group-hover:scale-[1.04]" loading="lazy" width="800" height="1000">
+          </a>
+          <figcaption class="mt-4 flex gap-4 text-sm"><span class="font-display font-bold">131</span><span class="text-ink/75">The sky bruises at evening — the last bell of the season.</span></figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <!-- ============ Trích dẫn lớn ============ -->
+    <section id="quote" data-section="quote-full" class="relative py-28 text-paper lg:py-36">
+      <div class="mx-auto w-full max-w-screen-2xl px-4 sm:px-6 lg:px-10 2xl:px-16">
+        <figure class="mx-auto max-w-5xl text-center">
+          <blockquote data-split="words" class="font-display text-[clamp(2.1rem,5.4vw,4.75rem)] font-medium leading-[1.12]">
+            “We kept the station lights on. Just in case someone still needed to go home.”
+          </blockquote>
+          <figcaption data-reveal="fade" class="mt-10 text-[11px] uppercase tracking-[0.35em] text-paper/80 sm:text-xs">Mr. Sato, the last station master</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <!-- ============ Lịch chiếu + nhận vé ============ -->
+    <section id="tickets" data-section="contact-split" class="relative pb-28 pt-12 text-paper lg:pb-36 lg:pt-16">
+      <div class="mx-auto grid w-full max-w-screen-2xl gap-14 px-4 sm:px-6 lg:grid-cols-12 lg:gap-10 lg:px-10 2xl:px-16">
+        <div class="lg:col-span-6">
+          <p data-reveal="fade" class="text-[11px] uppercase tracking-[0.35em] text-paper/70 sm:text-xs">Scene 04 — Where to watch</p>
+          <h2 data-split="words" class="mt-4 font-display text-4xl font-bold sm:text-5xl 2xl:text-6xl">Open-air screenings, summer 2026</h2>
+          <p data-reveal="up" class="mt-6 max-w-prose text-paper/80">Shown at dusk on old platforms and riverbanks, the way the film was meant to be seen. Seats are free; we only ask you to reserve so we bring enough blankets.</p>
+          <ol data-reveal-stagger="80" class="mt-10 divide-y divide-paper/15 border-y border-paper/15">
+            <li class="grid grid-cols-[5.5rem_1fr_auto] items-center gap-4 py-5 sm:grid-cols-[8rem_1fr_auto]">
+              <span class="whitespace-nowrap font-display text-xl font-bold sm:text-3xl">Aug 14</span>
+              <span><span class="block font-medium">Kisaragi Station platform</span><span class="text-sm text-paper/70">Nagano · 7:10 pm</span></span>
+              <span class="rounded-full bg-glow/90 px-3 py-1 text-xs font-medium text-ink">12 seats left</span>
+            </li>
+            <li class="grid grid-cols-[5.5rem_1fr_auto] items-center gap-4 py-5 sm:grid-cols-[8rem_1fr_auto]">
+              <span class="whitespace-nowrap font-display text-xl font-bold sm:text-3xl">Aug 21</span>
+              <span><span class="block font-medium">Kamo Riverbank</span><span class="text-sm text-paper/70">Kyoto · 7:00 pm</span></span>
+              <span class="rounded-full border border-paper/30 px-3 py-1 text-xs">Open</span>
+            </li>
+            <li class="grid grid-cols-[5.5rem_1fr_auto] items-center gap-4 py-5 sm:grid-cols-[8rem_1fr_auto]">
+              <span class="whitespace-nowrap font-display text-xl font-bold sm:text-3xl">Aug 29</span>
+              <span><span class="block font-medium">Shimokita Rooftop Cinema</span><span class="text-sm text-paper/70">Tokyo · 7:30 pm</span></span>
+              <span class="rounded-full border border-paper/30 px-3 py-1 text-xs">Open</span>
+            </li>
+            <li class="grid grid-cols-[5.5rem_1fr_auto] items-center gap-4 py-5 sm:grid-cols-[8rem_1fr_auto]">
+              <span class="whitespace-nowrap font-display text-xl font-bold sm:text-3xl">Sep 06</span>
+              <span><span class="block font-medium">Lake Suwa Fireworks Pier</span><span class="text-sm text-paper/70">Nagano · 6:50 pm</span></span>
+              <span class="rounded-full border border-paper/20 px-3 py-1 text-xs text-paper/60">Waitlist</span>
+            </li>
+          </ol>
+        </div>
+
+        <div class="lg:col-span-5 lg:col-start-8 lg:self-end">
+          <form data-form="reserve" data-success="Your seat is reserved. We'll email the platform map a week before." data-reveal="up"
+                class="rounded-[2rem] bg-paper p-6 text-ink shadow-[0_40px_80px_-40px_rgba(14,20,48,.7)] sm:p-9">
+            <h3 class="font-display text-2xl font-bold">Reserve a seat</h3>
+            <p class="mt-2 text-sm text-ink/70">Free entry. One email, no newsletter.</p>
+            <div class="mt-7 grid gap-5">
+              <label class="grid gap-1.5 text-sm font-medium">Your name
+                <input name="name" required minlength="2" autocomplete="name" class="h-12 rounded-xl border border-ink/15 bg-white px-4 text-base font-normal outline-none transition focus:border-dusk focus:ring-2 focus:ring-dusk/20">
+              </label>
+              <label class="grid gap-1.5 text-sm font-medium">Email
+                <input name="email" type="email" required autocomplete="email" class="h-12 rounded-xl border border-ink/15 bg-white px-4 text-base font-normal outline-none transition focus:border-dusk focus:ring-2 focus:ring-dusk/20">
+              </label>
+              <div class="grid gap-5 sm:grid-cols-[1fr_7rem]">
+                <label class="grid gap-1.5 text-sm font-medium">Screening
+                  <select name="screening" required class="h-12 rounded-xl border border-ink/15 bg-white px-3 text-base font-normal outline-none transition focus:border-dusk focus:ring-2 focus:ring-dusk/20">
+                    <option value="">Choose a night</option>
+                    <option>Aug 14 · Kisaragi Station</option>
+                    <option>Aug 21 · Kamo Riverbank</option>
+                    <option>Aug 29 · Shimokita Rooftop</option>
+                  </select>
+                </label>
+                <label class="grid gap-1.5 text-sm font-medium">Seats
+                  <select name="seats" class="h-12 rounded-xl border border-ink/15 bg-white px-3 text-base font-normal outline-none transition focus:border-dusk focus:ring-2 focus:ring-dusk/20">
+                    <option>1</option><option selected>2</option><option>3</option><option>4</option>
+                  </select>
+                </label>
+              </div>
+              <button type="submit" class="mt-1 inline-flex h-12 items-center justify-center rounded-full bg-ink font-medium text-paper transition duration-300 hover:bg-dusk active:scale-[.98]">Reserve my seat</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ CTA cuối — đêm sao, hồ ============ -->
+    <section id="night" data-section="cta-sky" class="relative flex min-h-[100dvh] flex-col overflow-hidden text-paper">
+      <div data-particles="stars" data-particles-density="1.1" class="pointer-events-none absolute inset-0" aria-hidden="true"></div>
+      <div data-layers class="pointer-events-none absolute inset-x-0 bottom-0 top-[38%]" aria-hidden="true">
+        <div data-depth="0.12" class="absolute inset-x-0 -bottom-[6%] top-0">
+          <img src="assets/img/night-lake.webp" alt="" class="h-full w-full object-cover object-[60%_80%] [mask-image:linear-gradient(to_bottom,transparent_0%,black_45%)]" loading="lazy" width="1600" height="1067">
+        </div>
+      </div>
+      <div class="relative z-10 mx-auto flex w-full max-w-screen-2xl flex-1 flex-col items-center justify-center px-4 py-32 text-center sm:px-6 lg:px-10 2xl:px-16">
+        <p data-reveal="fade" class="text-[11px] uppercase tracking-[0.35em] text-paper/70 sm:text-xs">Final scene</p>
+        <h2 data-split="words" class="mt-6 max-w-4xl font-display text-[clamp(2.6rem,7vw,6.5rem)] font-bold leading-[0.98]">Some trains only run once.</h2>
+        <a href="#tickets" data-reveal="up" data-reveal-delay="400" class="mt-10 inline-flex h-12 items-center justify-center rounded-full bg-glow px-8 font-medium text-ink shadow-[0_0_60px_-10px_rgba(255,201,139,.8)] transition duration-300 hover:-translate-y-0.5 hover:bg-paper active:scale-[.98]">Reserve a seat for Aug 14</a>
+      </div>
+    </section>
+  </main>
+
+  <!-- ============ Footer ============ -->
+  <footer id="footer" data-section="footer-minimal" class="relative border-t border-paper/10 bg-night/60 text-paper/75">
+    <div class="mx-auto flex w-full max-w-screen-2xl flex-col gap-4 px-4 py-10 text-sm sm:px-6 md:flex-row md:items-center md:justify-between lg:px-10 2xl:px-16">
+      <p class="font-display text-base text-paper">The Last Summer Train</p>
+      <p>Kisaragi Film Collective · <a href="mailto:hello@kisaragifilm.jp" class="underline-offset-4 hover:text-paper hover:underline">hello@kisaragifilm.jp</a></p>
+      <button type="button" data-copy="hello@kisaragifilm.jp" class="w-fit rounded-full border border-paper/25 px-4 py-2 transition hover:border-paper/60 hover:text-paper">Copy email</button>
+      <p>© 2026 · Backgrounds from real photographs (see credits)</p>
+    </div>
+  </footer>
+
+  <a href="#hero" data-back-to-top class="fixed bottom-6 right-6 z-40 grid size-12 place-items-center rounded-full bg-paper/90 text-ink shadow-lg backdrop-blur transition hover:-translate-y-0.5" aria-label="Back to top">
+    <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 19V5M6 11l6-6 6 6"/></svg>
+  </a>
+
+  <script src="assets/js/motion.js"></script>
+  <script src="assets/js/atmos.js"></script>
+</body>
+</html>

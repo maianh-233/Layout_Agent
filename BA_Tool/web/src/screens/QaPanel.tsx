@@ -9,15 +9,17 @@ const SEV_CLS: Record<Severity, string> = {
   major: 'bg-amber-100 text-amber-900',
   minor: 'bg-sky-100 text-sky-800',
 };
-const VP_LABEL = { mobile: 'Mobile 375', tablet: 'Tablet 768', desktop: 'Desktop 1440' } as const;
+const VP_LABEL = { mobile: 'Mobile 375', tablet: 'Tablet 768', desktop: 'Desktop 1440', wide: 'Màn rộng 1920' } as const;
 
 interface Props {
   project: Project;
   onStartJob: (kind: JobKind) => Promise<void>;
   onOpenPage: (page: string) => void;
+  /** Tác vụ "Để AI sửa": prototype-fix (luồng có SRS) hoặc quick-revise (chế độ nhanh) */
+  fixKind?: JobKind;
 }
 
-export function QaPanel({ project, onStartJob, onOpenPage }: Props) {
+export function QaPanel({ project, onStartJob, onOpenPage, fixKind = 'prototype-fix' }: Props) {
   const [report, setReport] = useState<QaReport | null | undefined>(undefined);
   const [error, setError] = useState('');
   const [vp, setVp] = useState<'mobile' | 'tablet' | 'desktop'>('mobile');
@@ -48,7 +50,7 @@ export function QaPanel({ project, onStartJob, onOpenPage }: Props) {
         <button type="button" className="btn-outline" onClick={() => void onStartJob('prototype-qa')}>
           ↻ Chạy QA lại
         </button>
-        <button type="button" className="btn-primary" disabled={!open.length} onClick={() => void onStartJob('prototype-fix')}>
+        <button type="button" className="btn-primary" disabled={!open.length} onClick={() => void onStartJob(fixKind)}>
           ✦ Để AI sửa các lỗi này
         </button>
       </div>
@@ -151,7 +153,7 @@ export function QaPanel({ project, onStartJob, onOpenPage }: Props) {
                 .map((s) => (
                   <figure key={s.file} className="overflow-hidden rounded-lg border border-line bg-white">
                     <button type="button" className="block w-full" onClick={() => setZoom(s.file)} title="Phóng to">
-                      <img src={`${base}${s.file}${bust}`} alt={`${s.page} — ${VP_LABEL[s.viewport]}`} loading="lazy" className="w-full" />
+                      <img src={`${base}${s.file}${bust}`} alt={`${s.page} — ${VP_LABEL[s.viewport as keyof typeof VP_LABEL]}`} loading="lazy" className="w-full" />
                     </button>
                     <figcaption className="truncate border-t border-line px-2 py-1 font-mono text-[11px] text-muted">{s.page}</figcaption>
                   </figure>

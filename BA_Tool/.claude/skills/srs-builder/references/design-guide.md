@@ -27,7 +27,7 @@ Bản máy đọc được của 9.2–9.5. Prototype sinh `tailwind.tokens.js` 
   "radius": { "sm": "4px", "md": "6px", "lg": "8px", "xl": "12px", "full": "9999px" },
   "shadow": { "sm": "0 1px 2px rgb(15 23 42 / 0.06)", "md": "0 4px 12px rgb(15 23 42 / 0.08)", "lg": "0 12px 32px rgb(15 23 42 / 0.12)" },
   "breakpoints": { "sm": "640px", "md": "768px", "lg": "1024px", "xl": "1280px", "2xl": "1536px" },
-  "layout": { "sidebarWidth": "248px", "sidebarCollapsedWidth": "64px", "topbarHeight": "56px", "contentMaxWidth": "1440px", "tableRowHeight": "40px", "controlHeight": "36px" },
+  "layout": { "sidebarWidth": "248px", "sidebarCollapsedWidth": "64px", "topbarHeight": "56px", "contentMaxWidth": "1680px", "tableRowHeight": "40px", "controlHeight": "36px" },
   "googleFonts": ["Be Vietnam Pro:400,500,600,700"]
 }
 ```

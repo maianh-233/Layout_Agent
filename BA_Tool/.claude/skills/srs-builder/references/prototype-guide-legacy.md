@@ -23,7 +23,7 @@ Prototype dùng để trình diễn cho khách hàng và làm tiền đề cho t
 ├── <các-trang>.html        # Tên file = screen-slug trong SRS
 ├── assets/
 │   ├── css/custom.css      # chỉ khi Tailwind không đủ
-│   ├── js/layout.js        # header, footer, dải "Bản demo", menu — render vào #app-header / #app-footer
+│   ├── js/layout.js        # header, footer, dải "Demo", menu — render vào #app-header / #app-footer
 │   ├── js/mock-data.js     # window.MOCK = { products: [...], ... }
 │   ├── js/app.js           # xử lý giả: giỏ hàng, lọc, tìm kiếm, đăng nhập giả, form, toast
 │   └── img/                # chỉ khi cần ảnh tĩnh
@@ -34,8 +34,8 @@ Thứ tự nạp script ở mỗi trang: `mock-data.js` → `layout.js` → `app
 
 ## 4. Dữ liệu giả (`mock-data.js`)
 
-- Nội dung **chân thực theo ngành**: tên sản phẩm/dịch vụ tiếng Việt thật, giá VNĐ (định dạng `toLocaleString('vi-VN')` + " ₫"), tên người, địa chỉ Việt Nam.
-- Ảnh placeholder: dùng `https://picsum.photos/seed/<từ-khóa>/600/800` hoặc khối màu/SVG inline. Luôn có `alt`.
+- Nội dung **chân thực theo ngành, viết tiếng Anh** (tránh lỗi phông tiếng Việt): tên sản phẩm/dịch vụ, tên người, địa chỉ, mô tả; giá VNĐ (định dạng `toLocaleString('en-US')` + " ₫").
+- Ảnh: chỉ ảnh chụp thật, đúng chủ đề, lấy qua công cụ `search_images` / `use_image` theo [image-guide.md](image-guide.md). Không link tự nghĩ, picsum / placeholder, ảnh AI tạo, hình SVG giả ảnh. Luôn có `alt`.
 - Trường dữ liệu theo `07-data-requirements.md` / màn hình trong `09-ui-ux/screens/`. Đủ số lượng để trình diễn lọc, phân trang (ví dụ 12–24 sản phẩm).
 
 ## 5. Xử lý giả (`app.js`)
@@ -48,9 +48,9 @@ Thứ tự nạp script ở mỗi trang: `mock-data.js` → `layout.js` → `app
 ## 6. Giao diện
 
 - Responsive: mobile, tablet, desktop (theo 9.16).
-- Một dải nhỏ cố định ghi **"Bản demo — dữ liệu giả"** (render trong `layout.js`).
+- Một dải nhỏ cố định ghi **"Demo — sample data"** (render trong `layout.js`).
 - Accessibility cơ bản: tương phản đủ, focus thấy được, label cho input, `alt` cho ảnh.
-- Ngôn ngữ giao diện: tiếng Việt (trừ khi SRS nói khác).
+- Ngôn ngữ giao diện: **tiếng Anh** (dịch nhãn, thông báo từ SRS sang tiếng Anh) — tránh lỗi phông tiếng Việt.
 
 ## 7. Code
 

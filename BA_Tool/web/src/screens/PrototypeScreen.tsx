@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api';
 import { ConfirmDialog, ErrorBanner } from '../components/ConfirmDialog';
+import { DevicePreview } from '../components/DevicePreview';
 import { Markdown } from '../components/Markdown';
 import type { DirListing, JobKind, Project } from '../types';
 import { QaPanel } from './QaPanel';
@@ -210,6 +211,9 @@ function Preview({ project, onRebuild, onStartJob }: { project: Project; onRebui
             <a className="btn-primary" href={url} target="_blank" rel="noreferrer">
               Mở trong tab mới ↗
             </a>
+            <a className="btn-outline" href={`/api/projects/${project.slug}/prototype.zip`} download>
+              ⬇ Tải .zip
+            </a>
             <button type="button" className="btn-outline" onClick={onRebuild}>
               Dựng lại / đổi folder
             </button>
@@ -258,14 +262,8 @@ function Preview({ project, onRebuild, onStartJob }: { project: Project; onRebui
       )}
       {view === 'qa' && <QaPanel project={project} onStartJob={onStartJob} onOpenPage={openPage} />}
       {view === 'handoff' && <Handoff slug={project.slug} version={project.qa?.createdAt ?? bust} />}
-      <div className={['overflow-hidden rounded-2xl border border-line bg-white shadow-sm', view === 'preview' ? '' : 'hidden'].join(' ')}>
-        <div className="flex items-center gap-2 border-b border-line bg-stone-50 px-4 py-2">
-          <span className="size-2.5 rounded-full bg-red-300" />
-          <span className="size-2.5 rounded-full bg-amber-300" />
-          <span className="size-2.5 rounded-full bg-emerald-300" />
-          <span className="ml-2 truncate font-mono text-xs text-muted">{page}</span>
-        </div>
-        <iframe key={url} title="Xem trước prototype" src={url} className="h-[75vh] w-full bg-white" />
+      <div className={view === 'preview' ? '' : 'hidden'}>
+        <DevicePreview url={url} label={page} />
       </div>
       </div>
     </div>
