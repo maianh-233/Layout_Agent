@@ -1,0 +1,145 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - button "BA SRS & Prototype Builder" [ref=e6]:
+        - generic [ref=e7]: BA
+        - text: SRS & Prototype Builder
+      - generic [ref=e10]: Claude Max · vanvd@samset.net · claude-opus-5-5
+  - main [ref=e8]:
+    - generic [ref=e54]:
+      - generic [ref=e55]:
+        - button "← Dự án" [ref=e56]
+        - generic [ref=e57]:
+          - heading "An Nam Ký Test" [level=1] [ref=e58]
+          - paragraph [ref=e59]: Website · chế độ nhanh · Cấu hình website
+        - list [ref=e60]:
+          - listitem [ref=e61]:
+            - button "1 Cấu hình" [disabled] [ref=e62]:
+              - generic [ref=e63]: "1"
+              - generic [ref=e64]: Cấu hình
+            - generic [ref=e65]: →
+          - listitem [ref=e66]:
+            - button "2 Website" [disabled] [ref=e67]:
+              - generic [ref=e68]: "2"
+              - generic [ref=e69]: Website
+      - generic [ref=e70]:
+        - generic [ref=e71]:
+          - generic [ref=e72]:
+            - heading "Cấu hình website" [level=2] [ref=e73]
+            - paragraph [ref=e74]:
+              - text: AI sẽ lập sitemap và dựng
+              - strong [ref=e75]: website nhiều trang
+              - text: theo cấu hình này. Chỉ
+              - strong [ref=e76]: chủ đề
+              - text: và
+              - strong [ref=e77]: tên thương hiệu
+              - text: là bắt buộc — phần còn lại để trống thì AI tự quyết định.
+          - generic [ref=e78]: Tự lưu nháp khi bạn nhập
+        - generic [ref=e79]:
+          - generic [ref=e80]:
+            - heading "Thông tin chính" [level=3] [ref=e81]
+            - generic [ref=e82]: Bắt buộc
+          - generic [ref=e83]:
+            - generic [ref=e84]:
+              - generic [ref=e85]: Chủ đề website *
+              - textbox "Chủ đề website *" [ref=e86]:
+                - /placeholder: "Ví dụ: Website thương hiệu thời trang Việt Nam"
+                - text: Website thương hiệu thời trang áo dài Việt Nam
+              - generic [ref=e87]:
+                - button "Website giới thiệu công ty công nghệ" [ref=e88]
+                - button "Website thương hiệu thời trang Việt Nam" [ref=e89]
+                - button "Website du lịch khám phá Nhật Bản" [ref=e90]
+                - button "Website portfolio cá nhân" [ref=e91]
+                - button "Website giới thiệu dự án kiến trúc" [ref=e92]
+            - generic [ref=e93]:
+              - generic [ref=e94]: Tên công ty / thương hiệu / dự án *
+              - textbox "Tên công ty / thương hiệu / dự án *" [ref=e95]:
+                - /placeholder: "Ví dụ: AN NAM KÝ"
+                - text: An Nam Ký Test
+              - paragraph [ref=e96]: "Website cá nhân: ghi tên của bạn hoặc tên dự án. Tên này xuất hiện ở tiêu đề, header, footer."
+            - generic [ref=e97]:
+              - generic [ref=e98]: Mục đích tạo website(tùy chọn)
+              - textbox "Mục đích tạo website(tùy chọn)" [ref=e99]:
+                - /placeholder: "Ví dụ: Giới thiệu thương hiệu và câu chuyện văn hóa; khách xem bộ sưu tập và liên hệ đặt may."
+                - text: Xây dựng nhận diện thương hiệu
+              - generic [ref=e100]:
+                - button "+ Giới thiệu doanh nghiệp" [ref=e101]
+                - button "+ Xây dựng nhận diện thương hiệu" [ref=e102]
+                - button "+ Trình bày dự án và sản phẩm" [ref=e103]
+                - button "+ Giới thiệu dịch vụ" [ref=e104]
+                - button "+ Xây dựng portfolio cá nhân" [ref=e105]
+                - button "+ Truyền tải câu chuyện và giá trị thương hiệu" [ref=e106]
+                - button "+ Cung cấp thông tin và hướng dẫn" [ref=e107]
+                - button "+ Giới thiệu một sự kiện hoặc chiến dịch" [ref=e108]
+              - paragraph [ref=e109]: Không bắt buộc — để trống thì AI suy ra từ chủ đề. Quyết định các trang, nội dung và chức năng.
+        - generic [ref=e110]:
+          - generic [ref=e111]:
+            - heading "Phong cách thiết kế" [level=3] [ref=e112]
+            - generic [ref=e113]: Áp dụng vào bố cục, chữ, màu, ảnh, khoảng trắng và hiệu ứng.
+          - radiogroup "Phong cách thiết kế" [ref=e115]:
+            - 'radio "Tự động Nhận diện: Minimal / Premium / Editorial" [checked] [ref=e222]':
+              - generic [ref=e118]: Tự động
+              - generic [ref=e119]: "Nhận diện: Minimal / Premium / Editorial"
+            - radio "Dreamy / Anime / Cinematic Bầu trời, ánh chiều, khoảnh khắc lặng — như một khung phim hoạt hình." [ref=e120]:
+              - generic [ref=e127]: Dreamy / Anime / Cinematic
+              - generic [ref=e128]: Bầu trời, ánh chiều, khoảnh khắc lặng — như một khung phim hoạt hình.
+            - radio "Nature / Organic / Atmospheric Rêu, gỗ, sương sớm — chất liệu tự nhiên, nhịp chậm." [ref=e129]:
+              - generic [ref=e136]: Nature / Organic / Atmospheric
+              - generic [ref=e137]: Rêu, gỗ, sương sớm — chất liệu tự nhiên, nhịp chậm.
+            - 'radio "Minimal / Premium / Editorial Như tạp chí in: chữ lớn, lưới chặt, rất ít màu." [ref=e138]':
+              - generic [ref=e145]: Minimal / Premium / Editorial
+              - generic [ref=e146]: "Như tạp chí in: chữ lớn, lưới chặt, rất ít màu."
+            - radio "Vintage / Retro / Film Hạt phim, màu phai, nhãn đánh máy — hoài niệm có chủ đích." [ref=e147]:
+              - generic [ref=e154]: Vintage / Retro / Film
+              - generic [ref=e155]: Hạt phim, màu phai, nhãn đánh máy — hoài niệm có chủ đích.
+            - radio "Futuristic / Digital Art Nền tối, lưới kỹ thuật, ánh neon tiết chế." [ref=e156]:
+              - generic [ref=e163]: Futuristic / Digital Art
+              - generic [ref=e164]: Nền tối, lưới kỹ thuật, ánh neon tiết chế.
+            - radio "Bold / Experimental / Creative Chữ khổng lồ, khối màu mạnh, phá lưới có kiểm soát." [ref=e165]:
+              - generic [ref=e172]: Bold / Experimental / Creative
+              - generic [ref=e173]: Chữ khổng lồ, khối màu mạnh, phá lưới có kiểm soát.
+        - generic [ref=e174]:
+          - generic [ref=e175]:
+            - heading "Mức chuyển động" [level=3] [ref=e176]
+            - generic [ref=e177]: Tôn trọng cài đặt giảm chuyển động (prefers-reduced-motion) của người xem.
+          - radiogroup "Mức chuyển động" [ref=e179]:
+            - radio "Theo preset (1) Mức hợp phong cách đã chọn" [ref=e228]:
+              - generic [ref=e181]: Theo preset (1)
+              - generic [ref=e182]: Mức hợp phong cách đã chọn
+            - radio "1 · Basic Hiện dần khi cuộn, hover — nhẹ, ưu tiên hiệu suất" [checked] [active] [ref=e183]:
+              - generic [ref=e184]: 1 · Basic
+              - generic [ref=e185]: Hiện dần khi cuộn, hover — nhẹ, ưu tiên hiệu suất
+            - radio "2 · Atmospheric Parallax, mây, hạt sáng, chữ trượt — có chọn lọc" [ref=e186]:
+              - generic [ref=e187]: 2 · Atmospheric
+              - generic [ref=e188]: Parallax, mây, hạt sáng, chữ trượt — có chọn lọc
+            - radio "3 · Advanced Cảnh nhiều lớp, cảnh ghim, trời đổi màu theo cuộn" [ref=e189]:
+              - generic [ref=e190]: 3 · Advanced
+              - generic [ref=e191]: Cảnh nhiều lớp, cảnh ghim, trời đổi màu theo cuộn
+        - generic [ref=e192]:
+          - generic [ref=e193]:
+            - heading "Ngôn ngữ website" [level=3] [ref=e194]
+            - generic [ref=e195]: Toàn bộ nội dung website dùng ngôn ngữ này (một ngôn ngữ, không có nút chuyển ngôn ngữ).
+          - radiogroup "Ngôn ngữ website" [ref=e197]:
+            - radio "English — Tiếng Anh" [ref=e198]
+            - radio "Vietnamese — Tiếng Việt" [checked] [ref=e199]
+            - radio "Chinese — Tiếng Trung (giản thể)" [ref=e200]
+            - radio "Japanese — Tiếng Nhật" [ref=e201]
+        - group [ref=e202]:
+          - generic "Tùy chọn thêmmàu sắc, font chữ, section" [ref=e203] [cursor=pointer]:
+            - generic [aria-hidden] [ref=e205]: ▾
+        - generic [ref=e206]:
+          - generic [ref=e207]:
+            - heading "Chú thích bổ sung" [level=3] [ref=e208]
+            - generic [ref=e209]: Không bắt buộc. Gửi nguyên văn cho AI — không bị cắt, kể cả phần cuối.
+          - generic [ref=e210]:
+            - generic [ref=e211]: Chú thích bổ sung
+            - textbox "Chú thích bổ sung" [ref=e212]:
+              - /placeholder: "Nhập các yêu cầu khác về bố cục, nội dung, đối tượng khách hàng, hình ảnh, chức năng, cách kể chuyện, những điều cần tránh hoặc các chi tiết đặc biệt mà bạn muốn website thể hiện…\n\nVí dụ:\n- Website chỉ giới thiệu thương hiệu, không có mua hàng hoặc thanh toán.\n- Ưu tiên bố cục editorial, nhiều khoảng trắng, typography nổi bật.\n- Không sử dụng gradient quá nhiều.\n- Những chức năng chưa có backend không được giả vờ hoạt động."
+            - paragraph [ref=e213]: 0 / 20.000 ký tự · 0 dòng
+        - group [ref=e214]:
+          - generic "Prompt mẫu — Sao chép để sử dụngđiền sẵn theo cấu hình hiện tại; chỗ trong [ ] là phần còn thiếu" [ref=e215] [cursor=pointer]:
+            - generic [aria-hidden] [ref=e217]: ▾
+        - generic [ref=e219]:
+          - button "← Quay lại danh sách dự án" [ref=e220]
+          - status
+          - button "Bắt đầu tạo website ➤" [ref=e221]

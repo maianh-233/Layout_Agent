@@ -9,6 +9,7 @@ import { ProjectList } from './screens/ProjectList';
 import { PrototypeScreen } from './screens/PrototypeScreen';
 import { QAScreen } from './screens/QAScreen';
 import { QuickScreen } from './screens/QuickScreen';
+import { QuickSetupScreen } from './screens/QuickSetupScreen';
 import { RequestScreen } from './screens/RequestScreen';
 import { SrsScreen } from './screens/SrsScreen';
 import { projectTypeLabel, screenLabel, stepLabels, stepOf, stepScreens, type AuthStatus, type JobKind, type Project, type Screen } from './types';
@@ -29,8 +30,8 @@ const JOB_TITLES: Record<JobKind, string> = {
   prototype: 'AI đang dựng prototype',
   questions: 'AI đang soạn tối đa 10 câu hỏi then chốt',
   srs: 'AI đang viết SRS (nghiệp vụ + giao diện) trong một lượt',
-  'quick-prototype': 'AI đang dựng landing page',
-  'quick-revise': 'AI đang sửa landing page theo góp ý',
+  'quick-prototype': 'AI đang dựng website nhiều trang',
+  'quick-revise': 'AI đang sửa website theo góp ý',
 };
 
 export default function App() {
@@ -120,7 +121,7 @@ function ProjectView({ slug, onHome }: { slug: string; onHome: () => void }) {
     }
     await reload();
   };
-  const startJob = (kind: JobKind, opts: { targetDir?: string; findingId?: string; feedback?: string; section?: string } = {}) =>
+  const startJob = (kind: JobKind, opts: { targetDir?: string; findingId?: string; feedback?: string; section?: string; page?: string } = {}) =>
     run(() => api.startJob(slug, kind, opts));
   const goScreen = async (s: Screen) => {
     try {
@@ -142,6 +143,18 @@ function ProjectView({ slug, onHome }: { slug: string; onHome: () => void }) {
   const canRetry = failed && (failed.kind !== 'prototype' || failed.targetDir);
   const usageLimit = failed?.errorCode === 'usage_limit';
 
+  /** Chế độ nhanh: màn hình cấu hình website (thay cho ô mô tả) */
+  const quickSetup = (fromDone: boolean) => (
+    <QuickSetupScreen
+      slug={slug}
+      initial={project.concept}
+      onSubmit={(concept) => run(() => api.submitQuick(slug, concept))}
+      // Nháp đã lưu lên server → tải lại dự án để lần mở sau thấy đúng bản mới nhất
+      onBack={fromDone ? () => void reload() : onHome}
+      backLabel={fromDone ? 'Quay lại website' : 'Quay lại danh sách dự án'}
+    />
+  );
+
   let body;
   if (running) {
     body = (
@@ -158,7 +171,12 @@ function ProjectView({ slug, onHome }: { slug: string; onHome: () => void }) {
   } else {
     switch (screen) {
       case 'request':
-        body = <RequestScreen initial={project.request} initialConcept={project.concept} flow={flow} onSubmit={(t, concept) => run(() => api.submitRequest(slug, t, concept))} />;
+        body =
+          flow === 'quick' ? (
+            quickSetup(Boolean(project.prototype.dir && project.prototype.pages.length))
+          ) : (
+            <RequestScreen initial={project.request} flow={flow} onSubmit={(t) => run(() => api.submitRequest(slug, t))} />
+          );
         break;
       case 'business-qa':
         body = (
@@ -215,12 +233,12 @@ function ProjectView({ slug, onHome }: { slug: string; onHome: () => void }) {
             project.prototype.dir && project.prototype.pages.length ? (
               <QuickScreen
                 project={project}
-                onRevise={(feedback, section) => startJob('quick-revise', { feedback, section })}
+                onRevise={(feedback, section, page) => startJob('quick-revise', { feedback, section, page })}
                 onStartJob={(kind) => startJob(kind)}
                 onRestart={() => setView('request')}
               />
             ) : (
-              <RequestScreen initial={project.request} initialConcept={project.concept} flow={flow} onSubmit={(t, concept) => run(() => api.submitRequest(slug, t, concept))} />
+              quickSetup(false)
             );
           break;
         }
@@ -246,7 +264,7 @@ function ProjectView({ slug, onHome }: { slug: string; onHome: () => void }) {
         <div className="min-w-0">
           <h1 className="truncate text-xl font-bold tracking-tight">{project.name}</h1>
           <p className="text-sm text-muted">
-            {flow === 'quick' ? 'Landing page · chế độ nhanh' : projectTypeLabel(project.projectType)} · {screenLabel(screen, flow)}
+            {flow === 'quick' ? 'Website · chế độ nhanh' : projectTypeLabel(project.projectType)} · {screenLabel(screen, flow)}
             {view && ' (đang xem lại)'}
           </p>
         </div>

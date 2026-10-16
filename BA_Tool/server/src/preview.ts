@@ -4,7 +4,7 @@
 // Mở qua file:// đúng như khách mở; tắt chuyển động (reduced motion) để nội dung data-reveal hiện đủ khi chụp.
 import path from 'node:path';
 import { existsSync } from 'node:fs';
-import { pathToFileURL } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import type { Browser, Page } from 'playwright';
 import { createSdkMcpServer, tool } from '@anthropic-ai/claude-agent-sdk';
 import { z } from 'zod';
@@ -66,6 +66,8 @@ export function previewServer(target: string, log: (t: string) => void) {
     broken: string[];
     tiny: number;
     deadLinks: number;
+    /** Link tới file cục bộ (trang khác trong website) */
+    fileLinks: string[];
     sections: string[];
   }
   // Chuỗi script (không phải hàm TS): tsx chèn helper __name vào hàm lồng nhau, trình duyệt không có helper đó
@@ -111,6 +113,7 @@ export function previewServer(target: string, log: (t: string) => void) {
         const h = a.getAttribute('href');
         return h === '#' || (h.startsWith('#') && h.length > 1 && !document.getElementById(decodeURIComponent(h.slice(1))));
       }).length;
+      const fileLinks = Array.from(new Set(Array.from(document.querySelectorAll('a[href]')).map((a) => a.href).filter((h) => h.startsWith('file:'))));
       return {
         docWidth: document.documentElement.scrollWidth,
         W,
@@ -119,6 +122,7 @@ export function previewServer(target: string, log: (t: string) => void) {
         broken,
         tiny,
         deadLinks,
+        fileLinks,
         sections: Array.from(document.querySelectorAll('body > header, main > section, body > section, section[id], body > footer, main > footer'))
           .map((s) => \`\${s.tagName.toLowerCase()}\${s.id ? '#' + s.id : ''}\`)
           .filter((v, i, a) => a.indexOf(v) === i)
@@ -135,6 +139,11 @@ export function previewServer(target: string, log: (t: string) => void) {
     if (d.broken.length) out.push(`Ảnh hỏng: ${d.broken.join(', ')}`);
     if (d.tiny) out.push(`${d.tiny} đoạn chữ nhỏ hơn 12px`);
     if (d.deadLinks) out.push(`${d.deadLinks} link "#" hoặc trỏ tới id không tồn tại`);
+    const missingPages = d.fileLinks
+      .map((h) => fileURLToPath(h.split('#')[0].split('?')[0]))
+      .filter((f) => !existsSync(f))
+      .map((f) => path.relative(target, f).split(path.sep).join('/'));
+    if (missingPages.length) out.push(`Link tới trang chưa tồn tại: ${[...new Set(missingPages)].slice(0, 6).join(', ')}`);
     return out;
   };
 
@@ -211,7 +220,7 @@ export function previewServer(target: string, log: (t: string) => void) {
       ),
       tool(
         'check_page',
-        'Kiểm nhanh bằng code (không ảnh, rẻ): lỗi JS, file không tải được, tràn ngang ở 375 / 768 / 1440px kèm phần tử gây tràn, ảnh hỏng, chữ quá nhỏ, link chết.',
+        'Kiểm nhanh bằng code (không ảnh, rẻ): lỗi JS, file không tải được, tràn ngang ở 375 / 768 / 1440px kèm phần tử gây tràn, ảnh hỏng, chữ quá nhỏ, link chết (kể cả link tới trang chưa tạo). Website nhiều trang: gọi cho từng trang.',
         { page: z.string().optional().describe('Đường dẫn tương đối trong TARGET_DIR, mặc định index.html') },
         async ({ page: pageArg }) => {
           try {

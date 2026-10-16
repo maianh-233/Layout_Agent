@@ -155,6 +155,8 @@ export async function runQa(opts: {
   appName: string;
   /** Chế độ nhanh: bỏ phần registry / vai trò / style guide / HANDOFF */
   quick?: boolean;
+  /** Lỗi do kiểm tra khác phát hiện, gộp vào cùng báo cáo để "Sửa theo QA" xử lý luôn */
+  extraIssues?: Omit<QaIssue, 'id'>[];
   onProgress?: (text: string) => void;
 }): Promise<QaReport> {
   const { target, srs, quick } = opts;
@@ -347,6 +349,9 @@ export async function runQa(opts: {
   } finally {
     await browser.close();
   }
+
+  // Kiểm tra bằng code không cần trình duyệt (chế độ nhanh: sitemap, ngôn ngữ, màu / font BA yêu cầu… — site-report.ts)
+  for (const x of opts.extraIssues ?? []) add(x);
 
   if (!quick)
     for (const h of await scanHardcoded(target, pages))

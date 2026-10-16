@@ -20,7 +20,7 @@ Ba luồng làm việc:
 
 | Luồng | MODE | Hướng dẫn |
 |---|---|---|
-| **Nhanh** — landing page, mô tả → prototype, không SRS | `quick-prototype`, `quick-revise` | [references/quick-guide.md](references/quick-guide.md) |
+| **Nhanh** — website nhiều trang từ cấu hình Quick Create, không SRS | `quick-prototype`, `quick-revise` | [references/quick-guide.md](references/quick-guide.md) |
 | **Chuẩn** — tối đa 10 câu hỏi → một SRS gộp → prototype | `questions`, `srs`, rồi `prototype`, `prototype-fix`, `srs-review`, `srs-fix` | [references/standard-guide.md](references/standard-guide.md) |
 | Cũ — hai giai đoạn (chỉ dự án tạo trước đây) | `business-*`, `ui-*` | các mục bên dưới |
 
@@ -31,7 +31,8 @@ Tham số nhận được: $ARGUMENTS
 ## Quy tắc chung (mọi chế độ)
 
 - Viết tiếng Việt. Giữ thuật ngữ tiếng Anh trong ngoặc khi cần.
-- **Ngoại lệ — mọi chữ hiển thị trên prototype viết tiếng Anh** (tránh lỗi phông tiếng Việt), `<html lang="en">`: dữ liệu giả (tên người, công ty, sản phẩm, địa chỉ, mô tả, ghi chú, đánh giá khách), nội dung landing page, và cả nhãn giao diện (menu, nút, tiêu đề cột, trạng thái, toast, thông báo lỗi). SRS vẫn viết tiếng Việt; khi dựng prototype thì dịch nhãn / thông báo trong SRS sang tiếng Anh tương đương. Số dạng `1,284`, tiền `1,250,000 ₫`.
+- **Chế độ nhanh (`quick-*`): chữ hiển thị trên website theo ngôn ngữ BA chọn trong `concept.md`** (en / vi / zh / ja), `<html lang>` tương ứng, font có đủ ký tự theo kết quả tool kiểm tra.
+- **Ngoại lệ cho prototype có SRS — mọi chữ hiển thị trên prototype viết tiếng Anh** (tránh lỗi phông tiếng Việt), `<html lang="en">`: dữ liệu giả (tên người, công ty, sản phẩm, địa chỉ, mô tả, ghi chú, đánh giá khách), nội dung landing page, và cả nhãn giao diện (menu, nút, tiêu đề cột, trạng thái, toast, thông báo lỗi). SRS vẫn viết tiếng Việt; khi dựng prototype thì dịch nhãn / thông báo trong SRS sang tiếng Anh tương đương. Số dạng `1,284`, tiền `1,250,000 ₫`.
 - **Không bịa thông tin.** Chỉ dùng yêu cầu ban đầu, câu trả lời của khách và các file SRS đã có. Ngoại lệ: luồng nhanh và luồng chuẩn được **tự bổ sung hợp lý theo ngành** — luồng chuẩn phải gắn `[ĐỀ XUẤT]` cho phần tự bổ sung.
 - Chỉ đọc file **khi cần** (để tiết kiệm token). Luôn đọc `srs/README.md` (mục lục) trước khi mở file SRS chi tiết.
 - Chỉ ghi file vào `PROJECT_DIR` (và `TARGET_DIR` ở chế độ prototype). Không xóa file nào.
@@ -51,7 +52,7 @@ Tham số nhận được: $ARGUMENTS
 | File | Nội dung |
 |---|---|
 | `request.md` | Yêu cầu ban đầu của BA |
-| `concept.md` | Luồng nhanh: mô tả + preset thiết kế + mức chuyển động + section (do backend sinh từ `server/src/presets.ts`) |
+| `concept.md` | Luồng nhanh: brief website — chủ đề, thương hiệu, mục đích, ngôn ngữ, preset, mức chuyển động, màu, font, section + mô tả, trạng thái công cụ ảnh, chú thích nguyên văn (backend sinh từ `server/src/presets.ts`) |
 | `answers-business.md` | Câu hỏi + câu trả lời + ghi chú BA (do backend tạo trước khi gọi `srs` ở luồng chuẩn, hoặc `business-followup` / `business-srs` ở luồng cũ) |
 | `feedback.md` | Luồng nhanh: góp ý / lỗi QA cần sửa (do backend tạo trước khi gọi `quick-revise`) |
 | `answers-ui.md` | Câu hỏi giao diện + câu trả lời + ghi chú BA (do backend tạo trước khi gọi `ui-followup` / `ui-srs`) |
@@ -61,7 +62,7 @@ Tham số nhận được: $ARGUMENTS
 ## Các chế độ — đọc file nào, ghi file nào
 
 ### `quick-prototype` / `quick-revise` (luồng nhanh)
-Làm đúng theo [references/quick-guide.md](references/quick-guide.md): đọc `concept.md` (preset + mức chuyển động do tool ghi), ghép section từ [references/sections.md](references/sections.md), hiệu ứng bằng `motion.js` + `atmos.js`, tương tác bằng `ui.js` ([references/ui-guide.md](references/ui-guide.md)); tự xem trang bằng công cụ `view_page` / `check_page`. Danh mục preset: [references/presets.md](references/presets.md) (tool sinh). Không đọc / ghi SRS. Chỉ ghi vào `TARGET_DIR` (và không ghi gì khác trong `PROJECT_DIR`).
+Làm đúng theo [references/quick-guide.md](references/quick-guide.md): đọc hết `concept.md`, lập sitemap (`TARGET_DIR/_build/sitemap.json`) rồi dựng **nhiều trang** có điều hướng thật, ghép section từ [references/sections.md](references/sections.md), ảnh theo từng trang, hiệu ứng bằng `motion.js` + `atmos.js`, tương tác bằng `ui.js` ([references/ui-guide.md](references/ui-guide.md)); tự xem trang bằng công cụ `view_page` / `check_page`. Danh mục preset: [references/presets.md](references/presets.md) (tool sinh). Không đọc / ghi SRS, không viết README.md (tool sinh). Chỉ ghi vào `TARGET_DIR` (và không ghi gì khác trong `PROJECT_DIR`).
 
 ### `questions` (luồng chuẩn)
 Theo mục "MODE `questions`" trong [references/standard-guide.md](references/standard-guide.md). Chỉ ghi `PROJECT_DIR/questions-business.json`, tối đa 10 câu.

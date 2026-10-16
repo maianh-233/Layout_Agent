@@ -27,7 +27,8 @@ import { checkDesignTokens } from './design.js';
 import { buildReview, codeReview, readReview, reviewSummary, writeReview } from './review.js';
 import { diffDirs, isClientFile, listAll, listVersions, lockVersion, versionRoot } from './versions.js';
 import { QA_JSON } from './qa.js';
-import { ConceptSchema, presetSummaries, writePresetCatalog } from './presets.js';
+import { probeImages, providerChain } from './images.js';
+import { ConceptSchema, QuickStartSchema, presetSummaries, quickCatalog, writePresetCatalog } from './presets.js';
 import { FLOWS, JOB_KINDS, PROJECT_TYPES, SaveAnswersSchema, type Screen } from './schemas.js';
 
 const app = express();
@@ -104,18 +105,41 @@ app.get('/api/presets', (_req, res) => {
   res.json(presetSummaries());
 });
 
+/** Danh mục cho màn hình cấu hình Quick Create: preset, section, ngôn ngữ, giới hạn độ dài */
+app.get('/api/quick-catalog', (_req, res) => {
+  res.json(quickCatalog());
+});
+
+/** Lưu nháp cấu hình website (tự lưu khi BA nhập) — quay lại / tải lại trang không mất dữ liệu */
+app.put('/api/projects/:slug/concept', h(async (req, res) => {
+  const concept = ConceptSchema.parse(req.body?.concept ?? {});
+  const p = await updateProject(param(req, 'slug'), (pr) => {
+    if (pr.flow !== 'quick') throw new HttpError(400, 'Chỉ dùng cho dự án chế độ nhanh.');
+    pr.concept = concept;
+  });
+  res.json({ ok: true, updatedAt: p.updatedAt });
+}));
+
 app.post('/api/projects/:slug/request', h(async (req, res) => {
-  const { request, concept } = z
-    .object({ request: z.string().trim().min(10, 'Yêu cầu quá ngắn'), concept: ConceptSchema.optional() })
-    .parse(req.body);
   const slug = param(req, 'slug');
+  const current = await loadProject(slug);
+  if (current.flow === 'quick') {
+    // Chế độ nhanh: cấu hình đầy đủ là dữ liệu chính; chủ đề + thương hiệu bắt buộc
+    const concept = QuickStartSchema.parse(req.body?.concept ?? {});
+    await requireLogin();
+    await updateProject(slug, (pr) => {
+      pr.concept = concept;
+      pr.request = concept.topic;
+    });
+    res.json({ jobId: await startJob(slug, 'quick-prototype', { targetDir: quickPrototypeDir(slug) }) });
+    return;
+  }
+  const { request } = z.object({ request: z.string().trim().min(10, 'Yêu cầu quá ngắn') }).parse(req.body);
   await requireLogin();
   const p = await updateProject(slug, (pr) => {
     pr.request = request;
-    if (concept) pr.concept = concept;
   });
-  if (p.flow === 'quick') res.json({ jobId: await startJob(slug, 'quick-prototype', { targetDir: quickPrototypeDir(slug) }) });
-  else res.json({ jobId: await startJob(slug, p.flow === 'standard' ? 'questions' : 'business-questions') });
+  res.json({ jobId: await startJob(slug, p.flow === 'standard' ? 'questions' : 'business-questions') });
 }));
 
 app.post('/api/projects/:slug/jobs', h(async (req, res) => {
@@ -127,6 +151,12 @@ app.post('/api/projects/:slug/jobs', h(async (req, res) => {
       feedback: z.string().trim().max(8000).optional(),
       /** quick-revise: chỉ sửa trong section này */
       section: z.string().trim().regex(/^[\w-]{1,80}$/, 'Section không hợp lệ').optional(),
+      /** quick-revise: trang đang xem / chứa section */
+      page: z
+        .string()
+        .trim()
+        .regex(/^[\w-]+(\/[\w-]+)*\.html$/, 'Trang không hợp lệ')
+        .optional(),
     })
     .parse(req.body);
   const slug = param(req, 'slug');
@@ -158,7 +188,7 @@ app.post('/api/projects/:slug/jobs', h(async (req, res) => {
     if (!body.findingId) throw new HttpError(400, 'Thiếu mã lỗi cần sửa');
     if ((await loadProject(slug)).pendingFix) throw new HttpError(409, 'Đang có một bản sửa chờ xem. Hãy lưu hoặc bỏ bản sửa đó trước.');
   }
-  res.json({ jobId: await startJob(slug, body.kind, { targetDir, findingId: body.findingId, feedback: body.feedback, section: body.section }) });
+  res.json({ jobId: await startJob(slug, body.kind, { targetDir, findingId: body.findingId, feedback: body.feedback, section: body.section, page: body.page }) });
 }));
 
 /** "Chạy lại bước này" — chạy lại tác vụ lỗi gần nhất (ví dụ sau khi chạm giới hạn sử dụng). */
@@ -414,6 +444,12 @@ app.listen(PORT, '127.0.0.1', () => {
   console.log(`[server] http://127.0.0.1:${PORT}  (model: ${MODEL})`);
   // Danh mục preset cho AI (references/presets.md) luôn khớp với presets.ts
   writePresetCatalog().catch((e) => console.warn('[server] Không ghi được presets.md:', e instanceof Error ? e.message : e));
+  // Kiểm tra nguồn ảnh ngay khi khởi động: khóa API hỏng hiện rõ ở đây thay vì âm thầm làm website thiếu ảnh
+  probeImages().then((r) => {
+    const skipped = r.attempts.filter((a) => a.error).map((a) => `${a.provider}: ${a.error}`);
+    if (r.ok) console.log(`[server] Nguồn ảnh: ${providerChain().join(' → ')} — đang dùng ${r.provider}${skipped.length ? ` (bỏ qua ${skipped.join('; ')})` : ''}`);
+    else console.warn(`[server] CẢNH BÁO: không tìm được ảnh từ nguồn nào (${r.error}). Website sẽ được dựng với bố cục không ảnh.`);
+  });
   // Kiểm tra Claude Code ngay khi khởi động
   checkAuth(true).then((st) => {
     console.log(`[server] Lệnh claude: ${st.cli.installed ? st.cli.version : 'không tìm thấy trong PATH'}`);

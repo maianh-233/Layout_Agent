@@ -5,7 +5,7 @@ import path from 'node:path';
 import { query, type CanUseTool } from '@anthropic-ai/claude-agent-sdk';
 import { MODEL, ROOT_DIR, TASTE_SKILL } from './config.js';
 import { isLargeSystem, type JobKind, type ProjectType } from './schemas.js';
-import { IMAGE_TOOLS, imageServer } from './images.js';
+import { IMAGE_TOOLS, imageServer, type ImageLogger } from './images.js';
 import { PREVIEW_TOOLS, previewServer } from './preview.js';
 
 export type AgentEvent =
@@ -22,6 +22,8 @@ export interface RunOptions {
   /** Ghi chú thêm vào cuối prompt, ví dụ lỗi JSON của lần chạy trước */
   extra?: string;
   onEvent: (e: AgentEvent) => void;
+  /** Log có cấu trúc của chuỗi ảnh: trạng thái MCP, lượt gọi tool, kết quả tìm / tải */
+  onImageEvent?: ImageLogger;
   signal?: AbortSignal;
 }
 
@@ -62,8 +64,9 @@ const MAX_TURNS: Record<JobKind, number> = {
   prototype: 400,
   questions: 20,
   srs: 400,
-  'quick-prototype': 170,
-  'quick-revise': 110,
+  // Website nhiều trang: sitemap + ảnh theo từng trang + tự xem lại
+  'quick-prototype': 320,
+  'quick-revise': 140,
 };
 
 /** CRM/ERP: nhiều module, nhiều màn hình hơn — vẫn chạy một lượt nên nới số bước. */
@@ -81,8 +84,8 @@ const LARGE_MAX_TURNS: Record<JobKind, number> = {
   prototype: 900,
   questions: 30,
   srs: 700,
-  'quick-prototype': 170,
-  'quick-revise': 110,
+  'quick-prototype': 320,
+  'quick-revise': 140,
 };
 
 /** Dựng / sửa giao diện prototype: bắt buộc dùng taste skill. */
@@ -150,6 +153,9 @@ export async function runSkill(opts: RunOptions): Promise<void> {
   let limited: { resetsAt?: number } | null = null;
   let finished = false;
   const log = (text: string) => onEvent({ type: 'log', text });
+  const imageLog: ImageLogger = opts.onImageEvent ?? (() => {});
+  /** Số lần AI gọi từng tool MCP — phân biệt "tool không được gọi" với "tool lỗi" */
+  const calls: Record<string, number> = {};
   const preview = usesPreview(mode) && targetDir ? previewServer(targetDir, log) : null;
   // Duyệt tool MCP qua canUseTool thay vì allowedTools (allowedTools tên trần sẽ bỏ qua canUseTool)
   const mcpTools = usesImages(mode) && targetDir ? [...IMAGE_TOOLS, ...(preview ? PREVIEW_TOOLS : [])] : [];
@@ -167,7 +173,7 @@ export async function runSkill(opts: RunOptions): Promise<void> {
         ...(usesImages(mode) && targetDir
           ? {
               mcpServers: {
-                images: imageServer(targetDir, log),
+                images: imageServer(targetDir, log, imageLog),
                 ...(preview ? { preview: preview.server } : {}),
               },
             }
@@ -193,6 +199,20 @@ export async function runSkill(opts: RunOptions): Promise<void> {
           throw new AgentError(`Không tìm thấy skill "${TASTE_SKILL}" (taste skill) trong hệ thống. Kiểm tra ~/.claude/skills.`);
         }
         onEvent({ type: 'log', text: `Đã khởi động AI (${msg.model}).` });
+        if (mcpTools.length) {
+          // MCP ảnh / preview đã kết nối chưa, tool đã đăng ký với agent chưa
+          const servers = (msg.mcp_servers ?? []).filter((s) => s.name === 'images' || s.name === 'preview');
+          const missing = mcpTools.filter((t) => !msg.tools.includes(t));
+          imageLog({
+            ev: 'mcp_init',
+            servers: servers.map((s) => ({ name: s.name, status: s.status })),
+            registered: mcpTools.filter((t) => msg.tools.includes(t)),
+            missing,
+            permissionMode: msg.permissionMode,
+          });
+          for (const s of servers) if (s.status !== 'connected') log(`Cảnh báo: MCP "${s.name}" không kết nối (${s.status}).`);
+          if (missing.length) log(`Cảnh báo: AI không thấy công cụ ${missing.join(', ')}.`);
+        }
       } else if (msg.type === 'rate_limit_event') {
         const info = msg.rate_limit_info;
         if (info.status === 'rejected') limited = { resetsAt: info.resetsAt };
@@ -202,6 +222,7 @@ export async function runSkill(opts: RunOptions): Promise<void> {
         for (const block of msg.message.content) {
           if (block.type === 'tool_use') {
             const input = block.input as Record<string, unknown>;
+            if (block.name.startsWith('mcp__')) calls[block.name] = (calls[block.name] ?? 0) + 1;
             const file = typeof input.file_path === 'string' ? input.file_path : '';
             if (block.name === 'Write' || block.name === 'Edit' || block.name === 'MultiEdit') {
               onEvent({ type: 'file', path: file, action: block.name === 'Write' ? 'write' : 'edit' });
@@ -242,6 +263,7 @@ export async function runSkill(opts: RunOptions): Promise<void> {
     throw explainError(apiError, m);
   } finally {
     await preview?.close();
+    if (mcpTools.length) imageLog({ ev: 'agent_calls', mode, calls });
   }
   if (limited) throw usageLimitError(limited.resetsAt);
   if (!finished) throw explainError(apiError, 'AI kết thúc bất thường (không có kết quả).');

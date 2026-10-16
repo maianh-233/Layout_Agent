@@ -1,0 +1,39 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - button "BA SRS & Prototype Builder" [ref=e6]:
+        - generic [ref=e7]: BA
+        - text: SRS & Prototype Builder
+      - generic [ref=e10]: Claude Max · vanvd@samset.net · claude-opus-5-5
+  - main [ref=e8]:
+    - generic [ref=e364]:
+      - generic [ref=e365]:
+        - generic [ref=e366]:
+          - heading "Dự án của bạn" [level=1] [ref=e367]
+          - paragraph [ref=e368]: "Nhanh: điền cấu hình → website nhiều trang. Đầy đủ: 10 câu hỏi → SRS → prototype."
+        - button "+ Tạo dự án mới" [ref=e369]
+      - list [ref=e371]:
+        - listitem [ref=e372]:
+          - generic [ref=e373]:
+            - paragraph [ref=e374]: An Nam Ký Test
+            - paragraph [ref=e375]: Website · chế độ nhanh · Tạo lúc 11:27 16/10/2026 · Cập nhật 11:27 16/10/2026
+          - generic [ref=e376]:
+            - generic [ref=e377]: "Bước 1: Cấu hình"
+            - text: Cấu hình website
+          - button "Mở tiếp →" [ref=e378]
+        - listitem [ref=e379]:
+          - generic [ref=e380]:
+            - paragraph [ref=e381]: CHIANG MAI YI PENG LANTERN FESTIVAL
+            - paragraph [ref=e382]: Website · chế độ nhanh · Tạo lúc 09:19 16/10/2026 · Cập nhật 09:37 16/10/2026
+          - generic [ref=e383]:
+            - generic [ref=e384]: "Bước 2: Website"
+            - text: Xem & sửa website
+          - button "Mở tiếp →" [ref=e385]
+        - listitem [ref=e386]:
+          - generic [ref=e387]:
+            - paragraph [ref=e388]: WILDROUTE EXPEDITIONS
+            - paragraph [ref=e389]: Website · chế độ nhanh · Tạo lúc 08:51 16/10/2026 · Cập nhật 08:51 16/10/2026
+          - generic [ref=e390]:
+            - generic [ref=e391]: "Bước 1: Cấu hình"
+            - text: Cấu hình website· Lỗi lần chạy trước
+          - button "Mở tiếp →" [ref=e392]

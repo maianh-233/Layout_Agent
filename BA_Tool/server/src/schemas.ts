@@ -223,10 +223,18 @@ export interface Project {
   versions?: { id: string; createdAt: string; note: string }[];
   /** Tóm tắt QA prototype gần nhất (chi tiết ở <prototype>/_qa/report.json) */
   qa?: { createdAt: string; critical: number; major: number; minor: number; screenshots: number; error?: string };
-  prototype: { dir: string | null; builtAt: string | null; pages: string[]; /** id section của index.html (chế độ nhanh) */ sections?: string[] };
-  /** Chế độ nhanh: định hướng thiết kế BA chọn (preset, mức chuyển động, section, mood) — xem presets.ts */
+  prototype: {
+    dir: string | null;
+    builtAt: string | null;
+    pages: string[];
+    /** id section của index.html (chế độ nhanh, dự án cũ) */
+    sections?: string[];
+    /** id section theo từng trang (chế độ nhanh, website nhiều trang) */
+    pageSections?: Record<string, string[]>;
+  };
+  /** Chế độ nhanh: cấu hình website BA nhập (chủ đề, thương hiệu, mục đích, phong cách, chuyển động, ngôn ngữ…) — xem presets.ts */
   concept?: Concept;
-  /** Chế độ nhanh: các lần BA yêu cầu sửa landing page */
+  /** Chế độ nhanh: các lần BA yêu cầu sửa website */
   revisions?: { createdAt: string; text: string }[];
   /** Tác vụ AI đang chạy hoặc vừa kết thúc */
   job: {
@@ -246,6 +254,8 @@ export interface Project {
     feedback?: string;
     /** Chỉ sửa trong section này (id, tác vụ quick-revise) */
     section?: string;
+    /** Trang chứa section cần sửa (tác vụ quick-revise) */
+    page?: string;
   } | null;
 }
 

@@ -1,4 +1,4 @@
-// Chế độ nhanh — landing page đã dựng: xem theo cỡ màn hình, sửa theo góp ý của khách, QA, tải về.
+// Chế độ nhanh — website đã dựng: xem từng trang theo cỡ màn hình, sửa theo góp ý của khách (cả website / một trang / một section), QA, tải về.
 import { useState } from 'react';
 import { DevicePreview } from '../components/DevicePreview';
 import type { JobKind, Project } from '../types';
@@ -7,9 +7,9 @@ import { QaPanel } from './QaPanel';
 interface Props {
   project: Project;
   /** Sửa theo góp ý (để trống = sửa theo báo cáo QA); section = chỉ sửa trong khối đó */
-  onRevise: (feedback: string, section?: string) => Promise<void>;
+  onRevise: (feedback: string, section?: string, page?: string) => Promise<void>;
   onStartJob: (kind: JobKind) => Promise<void>;
-  /** Quay lại sửa mô tả rồi dựng lại từ đầu */
+  /** Quay lại sửa cấu hình rồi dựng lại từ đầu */
   onRestart: () => void;
 }
 
@@ -18,6 +18,8 @@ const SUGGESTIONS = [
   'Sinh động hơn: thêm hiệu ứng cuộn và hover',
   'Thêm không khí: mây trôi, hạt sáng, trời đổi màu khi cuộn',
   'Đổi phong cách sang Minimal / Premium / Editorial',
+  'Thêm trang FAQ và đưa vào menu',
+  'Đổi ảnh cho đúng chủ đề hơn',
   'Tối giản, sang trọng hơn',
   'Hero nổi bật hơn, chữ to hơn',
   'Thêm bảng giá có nút chuyển tháng / năm',
@@ -36,7 +38,7 @@ export function QuickScreen({ project, onRevise, onStartJob, onRestart }: Props)
   const [feedback, setFeedback] = useState('');
   /** Phạm vi sửa: '' = toàn trang, hoặc id một section của index.html */
   const [section, setSection] = useState('');
-  const sections = project.prototype.sections ?? [];
+  const sections = project.prototype.pageSections?.[page] ?? (page === 'index.html' ? project.prototype.sections ?? [] : []);
   const [busy, setBusy] = useState(false);
   const url = `/preview/${project.slug}/${page}?v=${encodeURIComponent(project.prototype.builtAt ?? '')}`;
   const qaCount = project.qa ? project.qa.critical + project.qa.major + project.qa.minor : null;
@@ -45,7 +47,7 @@ export function QuickScreen({ project, onRevise, onStartJob, onRestart }: Props)
     if (!feedback.trim()) return;
     setBusy(true);
     try {
-      await onRevise(feedback.trim(), section || undefined);
+      await onRevise(feedback.trim(), section || undefined, page);
     } finally {
       setBusy(false);
     }
@@ -79,7 +81,7 @@ export function QuickScreen({ project, onRevise, onStartJob, onRestart }: Props)
             ))}
           </div>
           {pages.length > 1 && (
-            <select className="input w-auto py-1.5 font-mono text-xs" value={page} onChange={(e) => setPage(e.target.value)} aria-label="Trang">
+            <select className="input w-auto py-1.5 font-mono text-xs" value={page} onChange={(e) => { setPage(e.target.value); setSection(''); }} aria-label="Trang">
               {pages.map((p) => (
                 <option key={p}>{p}</option>
               ))}
@@ -111,15 +113,15 @@ export function QuickScreen({ project, onRevise, onStartJob, onRestart }: Props)
       <aside className="space-y-4">
         <section className="rounded-2xl border border-line bg-white p-4 shadow-sm">
           <h2 className="font-semibold">Khách muốn sửa gì?</h2>
-          <p className="mt-1 text-sm text-muted">Ghi góp ý bằng lời thường, AI sửa đúng chỗ và giữ nguyên phần còn lại.</p>
+          <p className="mt-1 text-sm text-muted">Ghi góp ý bằng lời thường, AI sửa đúng chỗ và giữ nguyên phần còn lại. Đang xem: <span className="font-mono text-xs">{page}</span>.</p>
           {sections.length > 0 && (
             <label className="mt-3 block text-xs text-muted">
               Phạm vi sửa
               <select className="input mt-1 py-1.5 font-mono text-xs" value={section} onChange={(e) => setSection(e.target.value)}>
-                <option value="">Toàn trang</option>
+                <option value="">Toàn website (ưu tiên trang đang xem)</option>
                 {sections.map((id) => (
                   <option key={id} value={id}>
-                    Chỉ section #{id}
+                    Chỉ section #{id} ({page})
                   </option>
                 ))}
               </select>
@@ -174,7 +176,7 @@ export function QuickScreen({ project, onRevise, onStartJob, onRestart }: Props)
         <section className="rounded-2xl border border-line bg-white p-4 text-sm shadow-sm">
           <p className="break-all font-mono text-xs text-muted">{project.prototype.dir}</p>
           <button type="button" className="btn-ghost mt-2 -ml-3" onClick={onRestart}>
-            ↺ Sửa mô tả & dựng lại từ đầu
+            ↺ Sửa cấu hình & dựng lại từ đầu
           </button>
         </section>
       </aside>

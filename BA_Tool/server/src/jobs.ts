@@ -27,15 +27,46 @@ import { REVIEW_AI, buildReview, codeReview, readAiReview, readReview, reviewSum
 import { diffDirs, listAll } from './versions.js';
 import { listPages, listSections, scanHardcoded, writeAtmos, writeFoundation, writeMotion, writeUi } from './prototype-assets.js';
 import { writeRuntime } from './prototype-runtime.js';
-import { QA_JSON, qaSummary, runQa, type QaReport } from './qa.js';
-import { detectPreset, presetById } from './presets.js';
+import { QA_JSON, qaSummary, runQa, type QaIssue, type QaReport } from './qa.js';
+import { ConceptSchema, languageOf, resolvePreset, type BriefChecks } from './presets.js';
+import { probeImages, type ImageEvent } from './images.js';
+import { FALLBACK_FONTS, checkFonts, type FontCheck } from './fonts.js';
+import { auditSite, diagnoseImages, writeSiteReadme } from './site-report.js';
 
 /** Tên preset sẽ dùng (BA chọn, hoặc tool nhận diện từ mô tả) — hiện trong tiến độ. */
 function conceptLabel(p: Project): string {
-  const chosen = p.concept?.preset && p.concept.preset !== 'auto' ? presetById(p.concept.preset) : undefined;
-  const preset = chosen ?? detectPreset(`${p.request} ${p.concept?.mood ?? ''}`);
+  const { preset, how } = resolvePreset(p.request, p.concept);
   const motion = p.concept?.motion && p.concept.motion !== 'auto' ? p.concept.motion : preset?.motion;
-  return `${preset ? preset.name : 'AI tự chọn preset'}${chosen || !preset ? '' : ' (tự nhận diện)'}${motion ? ` · chuyển động Level ${motion}` : ''}`;
+  return `${preset ? preset.name : 'AI tự chọn preset'}${how === 'detected' ? ' (tự nhận diện)' : ''}${motion ? ` · chuyển động Level ${motion}` : ''} · ${languageOf(p.concept?.language).label}`;
+}
+
+// ---------- Log bền vững: workspace/<slug>/logs/*.jsonl (lịch sử thực thi cho README, chẩn đoán ảnh) ----------
+
+export const logsDir = (slug: string) => path.join(projectDir(slug), 'logs');
+const appendQueue = new Map<string, Promise<void>>();
+/** Ghi nối một dòng JSON, giữ đúng thứ tự, không làm hỏng tác vụ nếu ghi lỗi */
+function appendJsonl(file: string, row: Record<string, unknown>) {
+  const prev = appendQueue.get(file) ?? Promise.resolve();
+  const next = prev
+    .then(() => fs.mkdir(path.dirname(file), { recursive: true }))
+    .then(() => fs.appendFile(file, JSON.stringify(row) + '\n', 'utf8'))
+    .catch((e) => console.warn('[logs]', (e as Error).message));
+  appendQueue.set(file, next);
+  return next;
+}
+export async function readJsonl(file: string): Promise<Record<string, any>[]> {
+  await appendQueue.get(file);
+  if (!existsSync(file)) return [];
+  return (await fs.readFile(file, 'utf8'))
+    .split('\n')
+    .filter(Boolean)
+    .flatMap((l) => {
+      try {
+        return [JSON.parse(l)];
+      } catch {
+        return [];
+      }
+    });
 }
 
 export type JobEvent =
@@ -101,6 +132,8 @@ export interface JobParams {
   feedback?: string;
   /** quick-revise: chỉ sửa trong section có id này (để trống = toàn trang) */
   section?: string;
+  /** quick-revise: trang chứa section / trang cần sửa (mặc định index.html) */
+  page?: string;
 }
 
 export async function startJob(slug: string, kind: JobKind, params: JobParams = {}): Promise<string> {
@@ -109,17 +142,33 @@ export async function startJob(slug: string, kind: JobKind, params: JobParams = 
 
   const job: Job = { id: randomUUID(), slug, kind, status: 'running', events: [], clients: new Set(), abort: new AbortController() };
   jobs.set(job.id, job);
+  const base = { id: job.id, kind, targetDir: params.targetDir, findingId: params.findingId, feedback: params.feedback, section: params.section, page: params.page };
   await updateProject(slug, (pr) => {
-    pr.job = { id: job.id, kind, status: 'running', targetDir: params.targetDir, findingId: params.findingId, feedback: params.feedback, section: params.section };
+    pr.job = { ...base, status: 'running' };
   });
+  const startedAt = new Date().toISOString();
+  /** Lịch sử tác vụ (chế độ nhanh dùng cho README của website) — chỉ các bước, không ghi log chi tiết của AI */
+  const history = (status: 'done' | 'error', error?: string) =>
+    appendJsonl(path.join(logsDir(slug), 'jobs.jsonl'), {
+      job: job.id,
+      kind,
+      startedAt,
+      endedAt: new Date().toISOString(),
+      status,
+      ...(error ? { error } : {}),
+      ...(params.feedback ? { feedback: params.feedback } : {}),
+      ...(params.section ? { section: params.section, page: params.page } : {}),
+      steps: job.events.filter((e) => e.type === 'step').map((e) => (e as { text: string }).text),
+    });
 
   // Chạy nền, không chờ
   void runJob(job, params).then(
     async () => {
       job.status = 'done';
       await updateProject(slug, (pr) => {
-        pr.job = { id: job.id, kind, status: 'done', targetDir: params.targetDir, findingId: params.findingId, feedback: params.feedback, section: params.section };
+        pr.job = { ...base, status: 'done' };
       });
+      await history('done');
       emit(job, { type: 'status', status: 'done' });
       closeClients(job);
     },
@@ -130,8 +179,9 @@ export async function startJob(slug: string, kind: JobKind, params: JobParams = 
       job.status = 'error';
       // Chỉ ghi trạng thái tác vụ — câu trả lời, màn hình hiện tại và các file đã có được giữ nguyên
       await updateProject(slug, (pr) => {
-        pr.job = { id: job.id, kind, status: 'error', error: message, errorCode, resetsAt, targetDir: params.targetDir, findingId: params.findingId, feedback: params.feedback, section: params.section };
+        pr.job = { ...base, status: 'error', error: message, errorCode, resetsAt };
       }).catch(() => {});
+      await history('error', message);
       emit(job, { type: 'status', status: 'error', error: message, errorCode });
       closeClients(job);
     },
@@ -146,7 +196,7 @@ export async function retryLastJob(slug: string): Promise<string> {
   // Vòng bổ sung đã xong (không có câu nào) nhưng lỗi lúc viết SRS → chỉ chạy lại phần viết SRS
   if (p.job.kind === 'business-followup' && p.business.followupStatus) return startJob(slug, 'business-srs');
   if (p.job.kind === 'ui-followup' && p.ui.followupStatus) return startJob(slug, 'ui-srs');
-  return startJob(slug, p.job.kind, { targetDir: p.job.targetDir, findingId: p.job.findingId, feedback: p.job.feedback, section: p.job.section });
+  return startJob(slug, p.job.kind, { targetDir: p.job.targetDir, findingId: p.job.findingId, feedback: p.job.feedback, section: p.job.section, page: p.job.page });
 }
 
 function closeClients(job: Job) {
@@ -168,8 +218,43 @@ async function runJob(job: Job, params: JobParams) {
     return path.relative(base, f).split(path.sep).join('/');
   };
   const onEvent = (e: AgentEvent) => emit(job, e.type === 'file' ? { ...e, path: relFile(e.path) } : e);
+  const imagesLog = path.join(logsDir(job.slug), 'images.jsonl');
+  /** Log có cấu trúc của chuỗi ảnh (không chứa khóa API) */
+  const onImageEvent = (e: ImageEvent) => void appendJsonl(imagesLog, { ts: new Date().toISOString(), job: job.id, kind: job.kind, ...e });
   const runAs = (mode: JobKind, extra?: string, projectDirOverride?: string) =>
-    runSkill({ mode, projectType, srsMode, projectDir: projectDirOverride ?? dir, targetDir: params.targetDir, extra, onEvent, signal: job.abort.signal });
+    runSkill({ mode, projectType, srsMode, projectDir: projectDirOverride ?? dir, targetDir: params.targetDir, extra, onEvent, onImageEvent, signal: job.abort.signal });
+
+  /**
+   * Kiểm tra trước khi giao việc cho AI (chế độ nhanh, không tốn lượt AI):
+   * công cụ ảnh có dùng được không (tự chuyển nguồn nếu khóa hỏng) và font có đủ ký tự của ngôn ngữ không.
+   */
+  const preflight = async (withFonts: boolean): Promise<BriefChecks & { fontChecks?: FontCheck[] }> => {
+    emit(job, { type: 'step', text: 'Kiểm tra công cụ ảnh và font trước khi dựng…' });
+    const p = await loadProject(job.slug);
+    const concept = ConceptSchema.parse(p.concept ?? {});
+    const { preset } = resolvePreset(p.request, concept);
+    const specs = concept.font ? [concept.font] : preset ? [preset.fonts.display, preset.fonts.body, preset.fonts.label ?? ''] : [];
+    const [img, fonts] = await Promise.all([probeImages(onImageEvent), withFonts ? checkFonts(specs, concept.language) : Promise.resolve([] as FontCheck[])]);
+    const skipped = img.attempts.filter((a) => a.error).map((a) => ({ provider: a.provider, kind: a.kind }));
+    emit(job, {
+      type: 'step',
+      text: img.ok
+        ? `Công cụ ảnh sẵn sàng (nguồn: ${img.provider}${skipped.length ? `; bỏ qua ${skipped.map((s) => `${s.provider} — ${s.kind === 'auth' ? 'khóa API bị từ chối' : s.kind}`).join(', ')}` : ''}).`
+        : `Cảnh báo: công cụ ảnh không khả dụng (${img.error}). AI sẽ dựng bố cục không ảnh ở các vị trí cần ảnh và ghi lại để bổ sung sau.`,
+    });
+    const weak = fonts.filter((f) => f.supports === false || f.onGoogleFonts === false);
+    if (weak.length) emit(job, { type: 'step', text: `Font cần fallback cho ${languageOf(concept.language).name}: ${weak.map((f) => `${f.family} (${f.onGoogleFonts === false ? 'không có trên Google Fonts' : 'thiếu ký tự'})`).join(', ')}.` });
+    const checks = {
+      images: { ok: img.ok, provider: img.provider, error: img.error, skipped },
+      fonts,
+      fallbackFont: FALLBACK_FONTS[concept.language],
+    };
+    if (withFonts) {
+      await fs.mkdir(logsDir(job.slug), { recursive: true });
+      await fs.writeFile(path.join(logsDir(job.slug), 'brief-checks.json'), JSON.stringify({ at: new Date().toISOString(), ...checks }, null, 2), 'utf8');
+    }
+    return { ...checks, fontChecks: fonts };
+  };
   const run = (extra?: string) => runAs(job.kind, extra);
 
   /** Viết SRS nghiệp vụ / bổ sung SRS giao diện (dùng cho tác vụ *-srs và khi vòng bổ sung không có câu nào). */
@@ -264,7 +349,7 @@ async function runJob(job: Job, params: JobParams) {
   };
 
   /** QA prototype bằng Playwright (không dùng AI) + HANDOFF.md. failSoft: lỗi QA không làm hỏng tác vụ dựng. */
-  const runQaStep = async ({ failSoft }: { failSoft: boolean }) => {
+  const runQaStep = async ({ failSoft, extraIssues }: { failSoft: boolean; extraIssues?: Omit<QaIssue, 'id'>[] }) => {
     const target = params.targetDir!;
     emit(job, {
       type: 'step',
@@ -279,6 +364,7 @@ async function runJob(job: Job, params: JobParams) {
         srs: quick ? undefined : srsDir(job.slug),
         appName: loaded.name,
         quick,
+        extraIssues,
         onProgress: (text) => emit(job, { type: 'step', text }),
       });
       const sum = qaSummary(report);
@@ -292,29 +378,75 @@ async function runJob(job: Job, params: JobParams) {
     }
   };
 
-  /** Prototype vừa dựng / sửa: ghi danh sách trang rồi QA (không chặn kết quả nếu QA lỗi). */
+  /**
+   * Website vừa dựng / sửa (chế độ nhanh): ghi danh sách trang + section từng trang, kiểm tra bằng code
+   * (sitemap, ngôn ngữ, thương hiệu, chuyển động, màu / font, ảnh), QA Playwright, rồi sinh README.md của website.
+   * Kiểm tra / QA / README lỗi không chặn kết quả dựng.
+   */
   const afterBuild = async (target: string) => {
     const pages = await listPages(target);
-    if (!pages.includes('index.html')) throw new Error('AI chưa tạo index.html trong folder prototype. Hãy thử chạy lại.');
-    const sections = loaded.flow === 'quick' ? await listSections(target) : undefined;
+    if (!pages.includes('index.html')) throw new Error('AI chưa tạo index.html trong folder website. Hãy thử chạy lại.');
+    const pageSections: Record<string, string[]> = {};
+    for (const pg of pages) pageSections[pg] = await listSections(target, pg);
     await updateProject(job.slug, (pr) => {
-      pr.prototype = { dir: target, builtAt: new Date().toISOString(), pages, ...(sections ? { sections } : {}) };
+      pr.prototype = { dir: target, builtAt: new Date().toISOString(), pages, sections: pageSections['index.html'] ?? [], pageSections };
       pr.screen = 'done';
     });
-    emit(job, { type: 'step', text: `Đã dựng ${pages.length} trang.` });
-    await runQaStep({ failSoft: true });
+    emit(job, { type: 'step', text: `Đã dựng ${pages.length} trang: ${pages.join(', ')}.` });
+    const p = await loadProject(job.slug);
+    let audit: Awaited<ReturnType<typeof auditSite>> | null = null;
+    try {
+      emit(job, { type: 'step', text: 'Kiểm tra bằng code: sitemap, ngôn ngữ, tên thương hiệu, menu, link, mức chuyển động, màu / font, ảnh…' });
+      audit = await auditSite(target, pages, p.concept, p.request);
+      emit(job, { type: 'step', text: `Kiểm tra bằng code: ${audit.issues.length} vấn đề (gộp vào báo cáo QA).` });
+    } catch (e) {
+      emit(job, { type: 'step', text: `Không kiểm tra được bằng code: ${(e as Error).message}` });
+    }
+    await runQaStep({ failSoft: true, extraIssues: audit?.issues });
+    if (!audit) return;
+    const qaFile = path.join(target, QA_JSON);
+    const qa = existsSync(qaFile) ? (JSON.parse(await fs.readFile(qaFile, 'utf8')) as QaReport) : null;
+    const imageEvents = await readJsonl(imagesLog);
+    for (const d of diagnoseImages(imageEvents.filter((e) => e.job === job.id || e.ev === 'preflight'), audit, qa))
+      emit(job, { type: 'step', text: `Ảnh — ${d.label}: ${d.detail}` });
+    try {
+      const briefFile = path.join(logsDir(job.slug), 'brief-checks.json');
+      const brief = existsSync(briefFile) ? JSON.parse(await fs.readFile(briefFile, 'utf8')) : null;
+      await writeSiteReadme({
+        target,
+        name: p.name,
+        concept: p.concept,
+        request: p.request,
+        audit,
+        qa,
+        imageEvents,
+        // Tác vụ đang chạy chưa ghi vào jobs.jsonl — thêm dòng tạm để README có lần dựng này
+        jobs: [...(await readJsonl(path.join(logsDir(job.slug), 'jobs.jsonl'))), { kind: job.kind, startedAt: new Date().toISOString(), status: 'done', feedback: params.feedback }],
+        fontChecks: brief?.fonts,
+        revisions: p.revisions,
+      });
+      emit(job, { type: 'step', text: 'Đã sinh README.md của website (cấu hình, sitemap, ảnh, kiểm thử, cách chạy).' });
+    } catch (e) {
+      emit(job, { type: 'step', text: `Không sinh được README.md: ${(e as Error).message}` });
+    }
   };
 
   switch (job.kind) {
-    // ---------- Chế độ nhanh: landing page, không có SRS ----------
+    // ---------- Chế độ nhanh: website nhiều trang, không có SRS ----------
     case 'quick-prototype': {
-      await writeRequestFile(await loadProject(job.slug));
+      const checks = await preflight(true);
+      await writeRequestFile(await loadProject(job.slug), checks);
       await fs.mkdir(params.targetDir!, { recursive: true });
+      // Lần dựng lại từ đầu: bỏ sitemap cũ để kiểm tra / README không đọc nhầm
+      await fs.rm(path.join(params.targetDir!, '_build'), { recursive: true, force: true });
       await writeMotion(params.targetDir!);
       await writeUi(params.targetDir!);
       await writeAtmos(params.targetDir!);
       const p = await loadProject(job.slug);
-      emit(job, { type: 'step', text: `Concept: ${conceptLabel(p)}. AI đang dựng landing page (motion.js + ui.js + atmos.js có sẵn), rồi tự chụp màn hình để rà và sửa…` });
+      emit(job, {
+        type: 'step',
+        text: `Cấu hình: ${conceptLabel(p)}. AI lập sitemap, tìm ảnh theo từng trang, dựng các trang (motion.js + ui.js + atmos.js có sẵn), rồi tự chụp màn hình để rà và sửa…`,
+      });
       await run();
       await afterBuild(params.targetDir!);
       return;
@@ -331,19 +463,25 @@ async function runJob(job: Job, params: JobParams) {
         text = 'Sửa các lỗi QA tự động phát hiện:\n' + issues.map((i) => `- [${i.category}] ${i.page ?? ''}${i.viewport ? ` (${i.viewport})` : ''}: ${i.message}`).join('\n');
       }
       const scope = params.section?.trim();
+      const page = params.page?.trim() || 'index.html';
       // Phạm vi một section: AI chỉ đọc / sửa / chụp lại khối đó — nhanh hơn nhiều so với cả trang
       const scopeLine = scope
-        ? `\n## Phạm vi\n\nCHỈ sửa section \`#${scope}\` trong index.html (kèm CSS / JS riêng của khối nếu cần). Không đổi các section khác.\n`
-        : '';
-      await fs.writeFile(path.join(dir, 'feedback.md'), `# Góp ý cần sửa\n${scopeLine}\n${text}\n`, 'utf8');
+        ? `\n## Phạm vi\n\nCHỈ sửa section \`#${scope}\` trong \`${page}\` (kèm CSS / JS riêng của khối nếu cần). Không đổi các section, trang khác.\n`
+        : params.page
+          ? `\n## Phạm vi\n\nBA đang xem trang \`${page}\` khi góp ý — ưu tiên sửa trang này; góp ý về header / footer / màu / font chung thì sửa đồng bộ mọi trang.\n`
+          : '';
+      // Ảnh: kiểm tra nhanh nguồn ảnh để AI không lặp lại lượt gọi biết trước là lỗi
+      const imgCheck = /ảnh|hình|image|photo|picture/i.test(text) || !scope ? (await preflight(false)).images : undefined;
+      const imgLine = imgCheck && !imgCheck.ok ? `\n## Công cụ ảnh\n\nKHÔNG khả dụng: ${imgCheck.error}. Không gọi search_images quá 1 lần; ghi vị trí cần ảnh vào sitemap.json.\n` : '';
+      await fs.writeFile(path.join(dir, 'feedback.md'), `# Góp ý cần sửa\n${scopeLine}${imgLine}\n${text}\n`, 'utf8');
       await writeMotion(params.targetDir!);
       await writeUi(params.targetDir!);
       await writeAtmos(params.targetDir!);
-      emit(job, { type: 'step', text: scope ? `AI đang sửa section #${scope} theo góp ý…` : 'AI đang sửa landing page theo góp ý (có chụp màn hình kiểm lại)…' });
+      emit(job, { type: 'step', text: scope ? `AI đang sửa section #${scope} (${page}) theo góp ý…` : 'AI đang sửa website theo góp ý (có chụp màn hình kiểm lại)…' });
       await run();
       await updateProject(job.slug, (pr) => {
         const t = params.feedback?.trim() || 'Sửa theo báo cáo QA';
-        pr.revisions = [...(pr.revisions ?? []), { createdAt: new Date().toISOString(), text: scope ? `[#${scope}] ${t}` : t }];
+        pr.revisions = [...(pr.revisions ?? []), { createdAt: new Date().toISOString(), text: scope ? `[${page}#${scope}] ${t}` : t }];
       });
       await afterBuild(params.targetDir!);
       return;

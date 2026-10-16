@@ -48,7 +48,7 @@ export function ProjectList({ onOpen }: { onOpen: (slug: string) => void }) {
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Dự án của bạn</h1>
-          <p className="mt-1 text-muted">Nhanh: mô tả → landing page ngay. Đầy đủ: 10 câu hỏi → SRS → prototype.</p>
+          <p className="mt-1 text-muted">Nhanh: điền cấu hình → website nhiều trang. Đầy đủ: 10 câu hỏi → SRS → prototype.</p>
         </div>
         <button type="button" className="btn-primary" onClick={() => setCreating(true)}>
           + Tạo dự án mới
@@ -133,7 +133,7 @@ export function ProjectList({ onOpen }: { onOpen: (slug: string) => void }) {
           )}
           <div className="flex gap-3">
             <button className="btn-primary" disabled={!ready || busy}>
-              {busy ? 'Đang tạo…' : 'Tạo dự án'}
+              {busy ? 'Đang tạo…' : flow === 'quick' ? 'Tạo dự án → Cấu hình website' : 'Tạo dự án'}
             </button>
             <button type="button" className="btn-ghost" onClick={() => setCreating(false)}>
               Hủy
@@ -159,7 +159,7 @@ export function ProjectList({ onOpen }: { onOpen: (slug: string) => void }) {
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-semibold">{p.name}</p>
                     <p className="mt-0.5 text-sm text-muted">
-                      <span className="font-medium text-stone-600">{p.flow === 'quick' ? 'Landing page · chế độ nhanh' : projectTypeLabel(p.projectType)}</span> · Tạo lúc {fmtDate(p.createdAt)} · Cập nhật {fmtDate(p.updatedAt)}
+                      <span className="font-medium text-stone-600">{p.flow === 'quick' ? 'Website · chế độ nhanh' : projectTypeLabel(p.projectType)}</span> · Tạo lúc {fmtDate(p.createdAt)} · Cập nhật {fmtDate(p.updatedAt)}
                     </p>
                   </div>
                   <div className="text-sm">

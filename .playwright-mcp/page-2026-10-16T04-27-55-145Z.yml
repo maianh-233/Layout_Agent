@@ -1,0 +1,295 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - button "BA SRS & Prototype Builder" [ref=e6]:
+        - generic [ref=e7]: BA
+        - text: SRS & Prototype Builder
+      - generic [ref=e10]: Claude Max · vanvd@samset.net · claude-opus-5-5
+  - main [ref=e8]:
+    - generic [ref=e394]:
+      - generic [ref=e395]:
+        - button "← Dự án" [ref=e396]
+        - generic [ref=e397]:
+          - heading "An Nam Ký Test" [level=1] [ref=e398]
+          - paragraph [ref=e399]: Website · chế độ nhanh · Cấu hình website
+        - list [ref=e400]:
+          - listitem [ref=e401]:
+            - button "1 Cấu hình" [disabled] [ref=e402]:
+              - generic [ref=e403]: "1"
+              - generic [ref=e404]: Cấu hình
+            - generic [ref=e405]: →
+          - listitem [ref=e406]:
+            - button "2 Website" [disabled] [ref=e407]:
+              - generic [ref=e408]: "2"
+              - generic [ref=e409]: Website
+      - generic [ref=e410]:
+        - generic [ref=e411]:
+          - generic [ref=e412]:
+            - heading "Cấu hình website" [level=2] [ref=e413]
+            - paragraph [ref=e414]:
+              - text: AI sẽ lập sitemap và dựng
+              - strong [ref=e415]: website nhiều trang
+              - text: theo cấu hình này. Chỉ
+              - strong [ref=e416]: chủ đề
+              - text: và
+              - strong [ref=e417]: tên thương hiệu
+              - text: là bắt buộc — phần còn lại để trống thì AI tự quyết định.
+          - generic [ref=e418]: Tự lưu nháp khi bạn nhập
+        - generic [ref=e419]:
+          - generic [ref=e420]:
+            - heading "Thông tin chính" [level=3] [ref=e421]
+            - generic [ref=e422]: Bắt buộc
+          - generic [ref=e423]:
+            - generic [ref=e424]:
+              - generic [ref=e425]: Chủ đề website *
+              - textbox "Chủ đề website *" [ref=e426]:
+                - /placeholder: "Ví dụ: Website thương hiệu thời trang Việt Nam"
+                - text: Website thương hiệu thời trang áo dài Việt Nam
+              - generic [ref=e427]:
+                - button "Website giới thiệu công ty công nghệ" [ref=e428]
+                - button "Website thương hiệu thời trang Việt Nam" [ref=e429]
+                - button "Website du lịch khám phá Nhật Bản" [ref=e430]
+                - button "Website portfolio cá nhân" [ref=e431]
+                - button "Website giới thiệu dự án kiến trúc" [ref=e432]
+            - generic [ref=e433]:
+              - generic [ref=e434]: Tên công ty / thương hiệu / dự án *
+              - textbox "Tên công ty / thương hiệu / dự án *" [ref=e435]:
+                - /placeholder: "Ví dụ: AN NAM KÝ"
+                - text: An Nam Ký Test
+              - paragraph [ref=e436]: "Website cá nhân: ghi tên của bạn hoặc tên dự án. Tên này xuất hiện ở tiêu đề, header, footer."
+            - generic [ref=e437]:
+              - generic [ref=e438]: Mục đích tạo website(tùy chọn)
+              - textbox "Mục đích tạo website(tùy chọn)" [ref=e439]:
+                - /placeholder: "Ví dụ: Giới thiệu thương hiệu và câu chuyện văn hóa; khách xem bộ sưu tập và liên hệ đặt may."
+                - text: Xây dựng nhận diện thương hiệu
+              - generic [ref=e440]:
+                - button "+ Giới thiệu doanh nghiệp" [ref=e441]
+                - button "+ Xây dựng nhận diện thương hiệu" [ref=e442]
+                - button "+ Trình bày dự án và sản phẩm" [ref=e443]
+                - button "+ Giới thiệu dịch vụ" [ref=e444]
+                - button "+ Xây dựng portfolio cá nhân" [ref=e445]
+                - button "+ Truyền tải câu chuyện và giá trị thương hiệu" [ref=e446]
+                - button "+ Cung cấp thông tin và hướng dẫn" [ref=e447]
+                - button "+ Giới thiệu một sự kiện hoặc chiến dịch" [ref=e448]
+              - paragraph [ref=e449]: Không bắt buộc — để trống thì AI suy ra từ chủ đề. Quyết định các trang, nội dung và chức năng.
+        - generic [ref=e450]:
+          - generic [ref=e451]:
+            - heading "Phong cách thiết kế" [level=3] [ref=e452]
+            - generic [ref=e453]: Áp dụng vào bố cục, chữ, màu, ảnh, khoảng trắng và hiệu ứng.
+          - radiogroup "Phong cách thiết kế" [ref=e455]:
+            - 'radio "Tự động Nhận diện: Minimal / Premium / Editorial" [ref=e456]':
+              - generic [ref=e463]: Tự động
+              - generic [ref=e464]: "Nhận diện: Minimal / Premium / Editorial"
+            - radio "Dreamy / Anime / Cinematic Bầu trời, ánh chiều, khoảnh khắc lặng — như một khung phim hoạt hình." [ref=e465]:
+              - generic [ref=e472]: Dreamy / Anime / Cinematic
+              - generic [ref=e473]: Bầu trời, ánh chiều, khoảnh khắc lặng — như một khung phim hoạt hình.
+            - radio "Nature / Organic / Atmospheric Rêu, gỗ, sương sớm — chất liệu tự nhiên, nhịp chậm." [ref=e474]:
+              - generic [ref=e481]: Nature / Organic / Atmospheric
+              - generic [ref=e482]: Rêu, gỗ, sương sớm — chất liệu tự nhiên, nhịp chậm.
+            - 'radio "Minimal / Premium / Editorial Như tạp chí in: chữ lớn, lưới chặt, rất ít màu." [checked] [ref=e483]':
+              - generic [ref=e490]: Minimal / Premium / Editorial
+              - generic [ref=e491]: "Như tạp chí in: chữ lớn, lưới chặt, rất ít màu."
+            - radio "Vintage / Retro / Film Hạt phim, màu phai, nhãn đánh máy — hoài niệm có chủ đích." [ref=e492]:
+              - generic [ref=e499]: Vintage / Retro / Film
+              - generic [ref=e500]: Hạt phim, màu phai, nhãn đánh máy — hoài niệm có chủ đích.
+            - radio "Futuristic / Digital Art Nền tối, lưới kỹ thuật, ánh neon tiết chế." [ref=e501]:
+              - generic [ref=e508]: Futuristic / Digital Art
+              - generic [ref=e509]: Nền tối, lưới kỹ thuật, ánh neon tiết chế.
+            - radio "Bold / Experimental / Creative Chữ khổng lồ, khối màu mạnh, phá lưới có kiểm soát." [ref=e510]:
+              - generic [ref=e517]: Bold / Experimental / Creative
+              - generic [ref=e518]: Chữ khổng lồ, khối màu mạnh, phá lưới có kiểm soát.
+        - generic [ref=e519]:
+          - generic [ref=e520]:
+            - heading "Mức chuyển động" [level=3] [ref=e521]
+            - generic [ref=e522]: Tôn trọng cài đặt giảm chuyển động (prefers-reduced-motion) của người xem.
+          - radiogroup "Mức chuyển động" [ref=e524]:
+            - radio "Theo preset (1) Mức hợp phong cách đã chọn" [ref=e525]:
+              - generic [ref=e526]: Theo preset (1)
+              - generic [ref=e527]: Mức hợp phong cách đã chọn
+            - radio "1 · Basic Hiện dần khi cuộn, hover — nhẹ, ưu tiên hiệu suất" [checked] [ref=e528]:
+              - generic [ref=e529]: 1 · Basic
+              - generic [ref=e530]: Hiện dần khi cuộn, hover — nhẹ, ưu tiên hiệu suất
+            - radio "2 · Atmospheric Parallax, mây, hạt sáng, chữ trượt — có chọn lọc" [ref=e531]:
+              - generic [ref=e532]: 2 · Atmospheric
+              - generic [ref=e533]: Parallax, mây, hạt sáng, chữ trượt — có chọn lọc
+            - radio "3 · Advanced Cảnh nhiều lớp, cảnh ghim, trời đổi màu theo cuộn" [ref=e534]:
+              - generic [ref=e535]: 3 · Advanced
+              - generic [ref=e536]: Cảnh nhiều lớp, cảnh ghim, trời đổi màu theo cuộn
+        - generic [ref=e537]:
+          - generic [ref=e538]:
+            - heading "Ngôn ngữ website" [level=3] [ref=e539]
+            - generic [ref=e540]: Toàn bộ nội dung website dùng ngôn ngữ này (một ngôn ngữ, không có nút chuyển ngôn ngữ).
+          - radiogroup "Ngôn ngữ website" [ref=e542]:
+            - radio "English — Tiếng Anh" [ref=e543]
+            - radio "Vietnamese — Tiếng Việt" [checked] [ref=e544]
+            - radio "Chinese — Tiếng Trung (giản thể)" [ref=e545]
+            - radio "Japanese — Tiếng Nhật" [ref=e546]
+        - group [ref=e547]:
+          - generic "Tùy chọn thêmmàu sắc, font chữ, section · đã điền 3" [ref=e548] [cursor=pointer]:
+            - generic [ref=e549]:
+              - text: Tùy chọn thêm
+              - generic [ref=e550]: màu sắc, font chữ, section · đã điền 3
+            - generic [aria-hidden] [ref=e551]: ▾
+          - generic [ref=e552]:
+            - generic [ref=e553]:
+              - generic [ref=e554]:
+                - generic [ref=e555]: Màu sắc mong muốn(tùy chọn)
+                - textbox "Màu sắc mong muốn(tùy chọn)" [ref=e556]:
+                  - /placeholder: "Ví dụ: #1F3A5F, burgundy, kem và xanh rêu"
+                  - text: "#7A1F2B, kem và xanh rêu"
+                - paragraph [ref=e557]: "Mã HEX, tên màu hoặc mô tả. Để trống: AI chọn theo chủ đề & phong cách."
+              - generic [ref=e558]:
+                - generic [ref=e559]: Font chữ mong muốn(tùy chọn)
+                - textbox "Font chữ mong muốn(tùy chọn)" [ref=e560]:
+                  - /placeholder: "Ví dụ: Playfair Display"
+                  - text: Playfair Display
+                - paragraph [ref=e561]: Tool kiểm tra font có đủ ký tự của ngôn ngữ đã chọn và thêm font dự phòng.
+            - generic [ref=e562]:
+              - generic [ref=e563]:
+                - heading "Section / nhóm nội dung" [level=4] [ref=e564]
+                - generic [ref=e565]:
+                  - text: Đã chọn 3 — AI đặt vào đúng trang (trang chủ / trang riêng / trang chi tiết)
+                  - button "Bỏ chọn tất cả" [ref=e566]
+              - list [ref=e567]:
+                - listitem [ref=e568]:
+                  - generic [ref=e569] [cursor=pointer]:
+                    - 'checkbox "Hero / Giới thiệu chính Màn hình đầu: thông điệp chính, hình ảnh chủ đạo, nút hành động." [ref=e570]'
+                    - generic [ref=e571]:
+                      - generic [ref=e572]: Hero / Giới thiệu chính
+                      - generic [ref=e573]: "Màn hình đầu: thông điệp chính, hình ảnh chủ đạo, nút hành động."
+                - listitem [ref=e574]:
+                  - generic [ref=e575] [cursor=pointer]:
+                    - checkbox "1About / Câu chuyện thương hiệu Nguồn gốc, giá trị, con người đứng sau thương hiệu." [checked] [ref=e576]
+                    - generic [ref=e577]:
+                      - generic [ref=e578]: 1About / Câu chuyện thương hiệu
+                      - generic [ref=e579]: Nguồn gốc, giá trị, con người đứng sau thương hiệu.
+                  - generic [ref=e580]:
+                    - generic [ref=e581]: Mô tả mong muốn (không bắt buộc — để trống AI tự xây dựng)
+                    - textbox "Mô tả mong muốn (không bắt buộc — để trống AI tự xây dựng)" [ref=e582]:
+                      - /placeholder: "Ví dụ: Kể về quá trình hình thành thương hiệu và cảm hứng từ văn hóa Việt Nam."
+                      - text: Kể về quá trình hình thành thương hiệu và cảm hứng từ văn hóa Việt Nam.
+                    - paragraph [ref=e583]: "Gợi ý vị trí: Trang About riêng + đoạn giới thiệu ngắn trên trang chủ"
+                - listitem [ref=e584]:
+                  - generic [ref=e585] [cursor=pointer]:
+                    - checkbox "Services / Dịch vụ Các dịch vụ chính, mỗi dịch vụ có mô tả, có thể có trang chi tiết." [ref=e586]
+                    - generic [ref=e587]:
+                      - generic [ref=e588]: Services / Dịch vụ
+                      - generic [ref=e589]: Các dịch vụ chính, mỗi dịch vụ có mô tả, có thể có trang chi tiết.
+                - listitem [ref=e590]:
+                  - generic [ref=e591] [cursor=pointer]:
+                    - checkbox "Features / Điểm nổi bật Lý do chọn, điểm khác biệt, con số nổi bật." [ref=e592]
+                    - generic [ref=e593]:
+                      - generic [ref=e594]: Features / Điểm nổi bật
+                      - generic [ref=e595]: Lý do chọn, điểm khác biệt, con số nổi bật.
+                - listitem [ref=e596]:
+                  - generic [ref=e597] [cursor=pointer]:
+                    - checkbox "Projects / Portfolio Dự án, tác phẩm, case study tiêu biểu." [ref=e598]
+                    - generic [ref=e599]:
+                      - generic [ref=e600]: Projects / Portfolio
+                      - generic [ref=e601]: Dự án, tác phẩm, case study tiêu biểu.
+                - listitem [ref=e602]:
+                  - generic [ref=e603] [cursor=pointer]:
+                    - checkbox "Gallery / Thư viện hình ảnh Ảnh không gian, sản phẩm, khoảnh khắc — bấm để phóng to." [ref=e604]
+                    - generic [ref=e605]:
+                      - generic [ref=e606]: Gallery / Thư viện hình ảnh
+                      - generic [ref=e607]: Ảnh không gian, sản phẩm, khoảnh khắc — bấm để phóng to.
+                - listitem [ref=e608]:
+                  - generic [ref=e609] [cursor=pointer]:
+                    - checkbox "2Collections / Bộ sưu tập Nhóm sản phẩm / tác phẩm theo chủ đề, mùa (giới thiệu, không bán hàng)." [checked] [ref=e610]
+                    - generic [ref=e611]:
+                      - generic [ref=e612]: 2Collections / Bộ sưu tập
+                      - generic [ref=e613]: Nhóm sản phẩm / tác phẩm theo chủ đề, mùa (giới thiệu, không bán hàng).
+                  - generic [ref=e614]:
+                    - generic [ref=e615]: Mô tả mong muốn (không bắt buộc — để trống AI tự xây dựng)
+                    - textbox "Mô tả mong muốn (không bắt buộc — để trống AI tự xây dựng)" [ref=e616]:
+                      - /placeholder: Nội dung, hình ảnh, cách trình bày mong muốn cho section này…
+                    - paragraph [ref=e617]: "Gợi ý vị trí: Trang Collections + trang chi tiết bộ sưu tập"
+                - listitem [ref=e618]:
+                  - generic [ref=e619] [cursor=pointer]:
+                    - checkbox "Testimonials / Đánh giá Cảm nhận của khách hàng, đối tác." [ref=e620]
+                    - generic [ref=e621]:
+                      - generic [ref=e622]: Testimonials / Đánh giá
+                      - generic [ref=e623]: Cảm nhận của khách hàng, đối tác.
+                - listitem [ref=e624]:
+                  - generic [ref=e625] [cursor=pointer]:
+                    - checkbox "Team / Đội ngũ Những người chính, vai trò, chân dung." [ref=e626]
+                    - generic [ref=e627]:
+                      - generic [ref=e628]: Team / Đội ngũ
+                      - generic [ref=e629]: Những người chính, vai trò, chân dung.
+                - listitem [ref=e630]:
+                  - generic [ref=e631] [cursor=pointer]:
+                    - checkbox "Process / Quy trình Các bước làm việc / trải nghiệm theo mốc." [ref=e632]
+                    - generic [ref=e633]:
+                      - generic [ref=e634]: Process / Quy trình
+                      - generic [ref=e635]: Các bước làm việc / trải nghiệm theo mốc.
+                - listitem [ref=e636]:
+                  - generic [ref=e637] [cursor=pointer]:
+                    - checkbox "Pricing / Bảng giá Gói dịch vụ, giá tham khảo." [ref=e638]
+                    - generic [ref=e639]:
+                      - generic [ref=e640]: Pricing / Bảng giá
+                      - generic [ref=e641]: Gói dịch vụ, giá tham khảo.
+                - listitem [ref=e642]:
+                  - generic [ref=e643] [cursor=pointer]:
+                    - checkbox "FAQ / Câu hỏi thường gặp Giải đáp thắc mắc phổ biến." [ref=e644]
+                    - generic [ref=e645]:
+                      - generic [ref=e646]: FAQ / Câu hỏi thường gặp
+                      - generic [ref=e647]: Giải đáp thắc mắc phổ biến.
+                - listitem [ref=e648]:
+                  - generic [ref=e649] [cursor=pointer]:
+                    - checkbox "Blog / Tin tức Danh sách bài viết và trang đọc bài." [ref=e650]
+                    - generic [ref=e651]:
+                      - generic [ref=e652]: Blog / Tin tức
+                      - generic [ref=e653]: Danh sách bài viết và trang đọc bài.
+                - listitem [ref=e654]:
+                  - generic [ref=e655] [cursor=pointer]:
+                    - checkbox "Editorial / Trích dẫn, nhịp nghỉ Câu trích dẫn lớn, dải số liệu, khoảng nghỉ thị giác." [ref=e656]
+                    - generic [ref=e657]:
+                      - generic [ref=e658]: Editorial / Trích dẫn, nhịp nghỉ
+                      - generic [ref=e659]: Câu trích dẫn lớn, dải số liệu, khoảng nghỉ thị giác.
+                - listitem [ref=e660]:
+                  - generic [ref=e661] [cursor=pointer]:
+                    - checkbox "CTA / Kêu gọi hành động Khối chốt cuối trang dẫn tới liên hệ / đặt lịch." [ref=e662]
+                    - generic [ref=e663]:
+                      - generic [ref=e664]: CTA / Kêu gọi hành động
+                      - generic [ref=e665]: Khối chốt cuối trang dẫn tới liên hệ / đặt lịch.
+                - listitem [ref=e666]:
+                  - generic [ref=e667] [cursor=pointer]:
+                    - checkbox "3Contact / Liên hệ Thông tin liên hệ, bản đồ, form (bản demo nếu chưa có backend)." [checked] [ref=e668]
+                    - generic [ref=e669]:
+                      - generic [ref=e670]: 3Contact / Liên hệ
+                      - generic [ref=e671]: Thông tin liên hệ, bản đồ, form (bản demo nếu chưa có backend).
+                  - generic [ref=e672]:
+                    - generic [ref=e673]: Mô tả mong muốn (không bắt buộc — để trống AI tự xây dựng)
+                    - textbox "Mô tả mong muốn (không bắt buộc — để trống AI tự xây dựng)" [ref=e674]:
+                      - /placeholder: Nội dung, hình ảnh, cách trình bày mong muốn cho section này…
+                    - paragraph [ref=e675]: "Gợi ý vị trí: Trang Contact riêng"
+                - listitem [ref=e676]:
+                  - generic [ref=e677] [cursor=pointer]:
+                    - checkbox "Footer / Chân trang Thông tin thương hiệu, liên kết các trang, liên hệ, ©." [ref=e678]
+                    - generic [ref=e679]:
+                      - generic [ref=e680]: Footer / Chân trang
+                      - generic [ref=e681]: Thông tin thương hiệu, liên kết các trang, liên hệ, ©.
+        - generic [ref=e682]:
+          - generic [ref=e683]:
+            - heading "Chú thích bổ sung" [level=3] [ref=e684]
+            - generic [ref=e685]: Không bắt buộc. Gửi nguyên văn cho AI — không bị cắt, kể cả phần cuối.
+          - generic [ref=e686]:
+            - generic [ref=e687]: Chú thích bổ sung
+            - textbox "Chú thích bổ sung" [ref=e688]:
+              - /placeholder: "Nhập các yêu cầu khác về bố cục, nội dung, đối tượng khách hàng, hình ảnh, chức năng, cách kể chuyện, những điều cần tránh hoặc các chi tiết đặc biệt mà bạn muốn website thể hiện…\n\nVí dụ:\n- Website chỉ giới thiệu thương hiệu, không có mua hàng hoặc thanh toán.\n- Ưu tiên bố cục editorial, nhiều khoảng trắng, typography nổi bật.\n- Không sử dụng gradient quá nhiều.\n- Những chức năng chưa có backend không được giả vờ hoạt động."
+              - text: "Website chỉ giới thiệu thương hiệu, không có mua hàng. Ưu tiên nhiều khoảng trắng. YÊU CẦU CUỐI: không dùng gradient."
+            - paragraph [ref=e689]: 117 / 20.000 ký tự · 3 dòng
+        - group [ref=e690]:
+          - generic "Prompt mẫu — Sao chép để sử dụngđiền sẵn theo cấu hình hiện tại; chỗ trong [ ] là phần còn thiếu" [active] [ref=e691] [cursor=pointer]:
+            - generic [aria-hidden] [ref=e693]: ▾
+          - generic [ref=e694]:
+            - generic [ref=e695]: Prompt mẫu
+            - textbox "Prompt mẫu" [ref=e696]: "Tạo một WEBSITE NHIỀU TRANG (không phải một landing page) với cấu hình sau: 1. Chủ đề: Website thương hiệu thời trang áo dài Việt Nam 2. Thương hiệu / dự án: An Nam Ký Test 3. Mục đích: Xây dựng nhận diện thương hiệu 4. Phong cách thiết kế: Minimal / Premium / Editorial 5. Mức chuyển động: Level 1 6. Ngôn ngữ chính: Vietnamese — Tiếng Việt — toàn bộ menu, tiêu đề, nút, form, footer dùng ngôn ngữ này 7. Màu sắc: #7A1F2B, kem và xanh rêu 8. Font chữ: Playfair Display 9. Section và mô tả riêng: - About / Câu chuyện thương hiệu: Kể về quá trình hình thành thương hiệu và cảm hứng từ văn hóa Việt Nam. - Collections / Bộ sưu tập: [mô tả mong muốn — để trống để AI tự xây dựng] - Contact / Liên hệ: [mô tả mong muốn — để trống để AI tự xây dựng] 10. Yêu cầu trang & điều hướng: - Lập sitemap trước: trang chủ + các trang riêng (About, Services, Projects, Blog, Contact…) và trang chi tiết khi cần. - Header, footer, menu giống nhau trên mọi trang; mọi link dẫn tới trang / mục có thật. - Ảnh thật, đúng chủ đề của từng trang; không ảnh giả, không link ảnh tự nghĩ. - Chức năng chưa có backend (form, đặt chỗ, thanh toán) ghi rõ là bản demo, không giả vờ hoạt động. 11. Chú thích bổ sung: Website chỉ giới thiệu thương hiệu, không có mua hàng. Ưu tiên nhiều khoảng trắng. YÊU CẦU CUỐI: không dùng gradient."
+            - generic [ref=e697]:
+              - button "⧉ Sao chép prompt" [ref=e698]
+              - status
+              - generic [ref=e699]: Sao chép không thay đổi nội dung bạn đã nhập.
+        - generic [ref=e701]:
+          - button "← Quay lại danh sách dự án" [ref=e702]
+          - status
+          - button "Bắt đầu tạo website ➤" [ref=e703]

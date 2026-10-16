@@ -1,0 +1,52 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - button "BA SRS & Prototype Builder" [ref=e6]:
+        - generic [ref=e7]: BA
+        - text: SRS & Prototype Builder
+      - generic [ref=e10]: Claude Max · vanvd@samset.net · claude-opus-5-5
+  - main [ref=e8]:
+    - generic [ref=e11]:
+      - generic [ref=e12]:
+        - generic [ref=e13]:
+          - heading "Dự án của bạn" [level=1] [ref=e14]
+          - paragraph [ref=e15]: "Nhanh: điền cấu hình → website nhiều trang. Đầy đủ: 10 câu hỏi → SRS → prototype."
+        - button "+ Tạo dự án mới" [ref=e16]
+      - generic [ref=e17]:
+        - generic [ref=e18]:
+          - generic [ref=e19]: Tên dự án
+          - textbox "Tên dự án" [ref=e20]:
+            - /placeholder: "Ví dụ: Website shop thời trang Linh Anh, ERP Công ty VLXD Hòa Phát"
+            - text: An Nam Ký Test
+        - group "Chế độ" [ref=e21]:
+          - generic [ref=e23]:
+            - generic [ref=e24] [cursor=pointer]:
+              - radio "Nhanh — Website Điền cấu hình (chủ đề, thương hiệu, phong cách, ngôn ngữ, section…) → AI dựng website nhiều trang để show khách. Không viết SRS." [checked] [active] [ref=e25]
+              - generic [ref=e26]:
+                - generic [ref=e27]: Nhanh — Website
+                - generic [ref=e28]: Điền cấu hình (chủ đề, thương hiệu, phong cách, ngôn ngữ, section…) → AI dựng website nhiều trang để show khách. Không viết SRS.
+            - generic [ref=e29] [cursor=pointer]:
+              - radio "Đầy đủ — SRS + prototype Tối đa 10 câu hỏi → AI viết một bộ SRS gộp (nghiệp vụ + giao diện) → dựng prototype có vai trò, dữ liệu giả." [ref=e30]
+              - generic [ref=e31]:
+                - generic [ref=e32]: Đầy đủ — SRS + prototype
+                - generic [ref=e33]: Tối đa 10 câu hỏi → AI viết một bộ SRS gộp (nghiệp vụ + giao diện) → dựng prototype có vai trò, dữ liệu giả.
+        - generic [ref=e34]:
+          - button "Tạo dự án → Cấu hình website" [ref=e53]
+          - button "Hủy" [ref=e36]
+      - list [ref=e38]:
+        - listitem [ref=e39]:
+          - generic [ref=e40]:
+            - paragraph [ref=e41]: CHIANG MAI YI PENG LANTERN FESTIVAL
+            - paragraph [ref=e42]: Website · chế độ nhanh · Tạo lúc 09:19 16/10/2026 · Cập nhật 09:37 16/10/2026
+          - generic [ref=e43]:
+            - generic [ref=e44]: "Bước 2: Website"
+            - text: Xem & sửa website
+          - button "Mở tiếp →" [ref=e45]
+        - listitem [ref=e46]:
+          - generic [ref=e47]:
+            - paragraph [ref=e48]: WILDROUTE EXPEDITIONS
+            - paragraph [ref=e49]: Website · chế độ nhanh · Tạo lúc 08:51 16/10/2026 · Cập nhật 08:51 16/10/2026
+          - generic [ref=e50]:
+            - generic [ref=e51]: "Bước 1: Cấu hình"
+            - text: Cấu hình website· Lỗi lần chạy trước
+          - button "Mở tiếp →" [ref=e52]

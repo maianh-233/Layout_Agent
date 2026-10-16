@@ -13,6 +13,7 @@ import type {
   Project,
   ProjectType,
   QaReport,
+  QuickCatalog,
   Review,
   Screen,
   SrsFileInfo,
@@ -45,10 +46,15 @@ export const api = {
     call<Project>('/api/projects', json('POST', { name, flow, projectType })),
   getProject: (slug: string) => call<Project>(`/api/projects/${slug}`),
   setScreen: (slug: string, screen: Screen) => call<Project>(`/api/projects/${slug}/screen`, json('POST', { screen })),
-  submitRequest: (slug: string, request: string, concept?: Concept) =>
-    call<{ jobId: string }>(`/api/projects/${slug}/request`, json('POST', { request, concept })),
+  submitRequest: (slug: string, request: string) => call<{ jobId: string }>(`/api/projects/${slug}/request`, json('POST', { request })),
+  /** Chế độ nhanh: bắt đầu tạo website từ cấu hình */
+  submitQuick: (slug: string, concept: Concept) => call<{ jobId: string }>(`/api/projects/${slug}/request`, json('POST', { concept })),
+  /** Chế độ nhanh: lưu nháp cấu hình */
+  saveConcept: (slug: string, concept: Concept, opts: { keepalive?: boolean } = {}) =>
+    call<{ ok: true; updatedAt: string }>(`/api/projects/${slug}/concept`, { ...json('PUT', { concept }), keepalive: opts.keepalive }),
+  quickCatalog: () => call<QuickCatalog>('/api/quick-catalog'),
   listPresets: () => call<PresetSummary[]>('/api/presets'),
-  startJob: (slug: string, kind: JobKind, opts: { targetDir?: string; findingId?: string; feedback?: string; section?: string } = {}) =>
+  startJob: (slug: string, kind: JobKind, opts: { targetDir?: string; findingId?: string; feedback?: string; section?: string; page?: string } = {}) =>
     call<{ jobId: string }>(`/api/projects/${slug}/jobs`, json('POST', { kind, ...opts })),
   getQa: (slug: string) => call<QaReport | null>(`/api/projects/${slug}/qa`),
   getReview: (slug: string) => call<Review | null>(`/api/projects/${slug}/review`),

@@ -23,7 +23,7 @@ Nạp trong `<head>` (không `defer`), ngay sau Tailwind: `<script src="assets/j
 | Bộ sưu tập ảnh | `data-lightbox` | `<a href="assets/img/du-an-1.jpg" data-lightbox="du-an" data-caption="Căn hộ 2PN, Q.7"><img …></a>` — cùng nhóm có nút trước / sau, phím ←→, vuốt |
 | Form đặt lịch / báo giá trong cửa sổ | `data-modal-open` | nút `<button data-modal-open="dat-lich">` + `<dialog id="dat-lich" class="…">…<button data-modal-close aria-label="Đóng">×</button></dialog>` |
 | Số điện thoại, số tài khoản, mã giảm giá | `data-copy` | `<button data-copy="0901 234 567">Sao chép</button>` |
-| Form liên hệ / đặt lịch | `form[data-form]` | `<form data-form="dat-lich" data-success="Đã nhận lịch hẹn! Chúng tôi gọi lại trong 15 phút.">` — trường dùng `required`, `type="email"`, `type="tel"`, `minlength`; nhãn bọc trường (`<label>Tên<input …></label>`) hoặc trường nằm trong một khối riêng để lỗi hiện ngay dưới. Muốn thay form bằng lời cảm ơn đẹp: thêm `<div data-form-success class="…">` trong form |
+| Form liên hệ / đặt lịch | `form[data-form]` | `<form data-form="lien-he">` — trường dùng `required`, `type="email"`, `type="tel"`, `minlength`; nhãn bọc trường (`<label>Tên<input …></label>`) hoặc trường nằm trong một khối riêng để lỗi hiện ngay dưới. **Chưa có backend → form là bản demo**: ui.js tự báo "demo, chưa gửi đi" theo `<html lang>`; không viết câu "đã gửi thành công / chúng tôi sẽ gọi lại". Ghi chú nhỏ cạnh nút gửi nói rõ là bản demo. Khối `<div data-form-success>` (nếu dùng) cũng phải nói rõ là demo |
 
 Thông báo tự viết: `UI.toast('Đã thêm vào giỏ', 'success')` trong `site.js`.
 

@@ -40,14 +40,14 @@ export const PROJECT_TYPE_OPTIONS: { value: ProjectType; label: string; hint: st
 /** Dự án tạo trước khi có loại dự án được coi là website. */
 export const projectTypeLabel = (t: ProjectType | undefined) =>
   PROJECT_TYPE_OPTIONS.find((o) => o.value === (t ?? 'website'))!.label;
-/** quick: landing page, mô tả → prototype; standard: 10 câu → SRS gộp → prototype; không có = dự án cũ hai giai đoạn */
+/** quick: cấu hình → website nhiều trang; standard: 10 câu → SRS gộp → prototype; không có = dự án cũ hai giai đoạn */
 export type Flow = 'quick' | 'standard';
 
 export const FLOW_OPTIONS: { value: Flow; label: string; hint: string }[] = [
   {
     value: 'quick',
-    label: 'Nhanh — Landing page',
-    hint: 'Mô tả ngắn → AI dựng ngay landing page để show khách. Không hỏi, không viết SRS. Tốn ít lượt AI nhất.',
+    label: 'Nhanh — Website',
+    hint: 'Điền cấu hình (chủ đề, thương hiệu, phong cách, ngôn ngữ, section…) → AI dựng website nhiều trang để show khách. Không viết SRS.',
   },
   {
     value: 'standard',
@@ -100,7 +100,14 @@ export interface Project {
   pendingFix?: { findingId: string; createdAt: string } | null;
   versions?: VersionInfo[];
   qa?: { createdAt: string; critical: number; major: number; minor: number; screenshots: number; error?: string };
-  prototype: { dir: string | null; builtAt: string | null; pages: string[]; sections?: string[] };
+  prototype: {
+    dir: string | null;
+    builtAt: string | null;
+    pages: string[];
+    sections?: string[];
+    /** id section theo từng trang (website nhiều trang) */
+    pageSections?: Record<string, string[]>;
+  };
   concept?: Concept;
   revisions?: { createdAt: string; text: string }[];
   job: {
@@ -114,33 +121,67 @@ export interface Project {
     findingId?: string;
     feedback?: string;
     section?: string;
+    page?: string;
   } | null;
 }
 
-// ---------- Chế độ nhanh: concept & design preset ----------
+// ---------- Chế độ nhanh: cấu hình website & design preset (danh mục lấy từ server: /api/quick-catalog) ----------
 
-export const SECTION_KINDS = [
-  ['hero', 'Hero'],
-  ['story', 'Câu chuyện / About'],
-  ['features', 'Tính năng / Dịch vụ'],
-  ['gallery', 'Gallery / Lookbook'],
-  ['editorial', 'Editorial / Trích dẫn'],
-  ['pricing', 'Bảng giá'],
-  ['testimonials', 'Đánh giá'],
-  ['faq', 'FAQ'],
-  ['cta', 'CTA'],
-  ['contact', 'Liên hệ'],
-] as const;
-export type SectionKind = (typeof SECTION_KINDS)[number][0];
 export type MotionLevel = 'auto' | '1' | '2' | '3';
+export type Language = 'en' | 'vi' | 'zh' | 'ja';
 
-/** Định hướng thiết kế BA chọn khi dựng nhanh — mọi trường không bắt buộc */
+export interface SectionPick {
+  id: string;
+  /** Mô tả riêng của BA; trống = AI tự xây dựng */
+  description: string;
+}
+
+/** Cấu hình website (giống ConceptSchema ở server/src/presets.ts) */
 export interface Concept {
+  topic: string;
+  brand: string;
+  purpose: string;
   preset: string;
   motion: MotionLevel;
-  sections: SectionKind[];
+  language: Language;
+  colors: string;
+  font: string;
+  sections: SectionPick[];
+  notes: string;
+  /** Dự án cũ */
   mood: string;
   reference: string;
+}
+
+export const EMPTY_CONCEPT: Concept = {
+  topic: '',
+  brand: '',
+  purpose: '',
+  preset: 'auto',
+  motion: 'auto',
+  language: 'en',
+  colors: '',
+  font: '',
+  sections: [],
+  notes: '',
+  mood: '',
+  reference: '',
+};
+
+/** Dự án cũ lưu sections là mảng id */
+export function normalizeConcept(c: Partial<Concept> & { sections?: (SectionPick | string)[] } | undefined): Concept {
+  const base = { ...EMPTY_CONCEPT, ...(c ?? {}) } as Concept;
+  base.sections = (c?.sections ?? []).map((s) => (typeof s === 'string' ? { id: s, description: '' } : { id: s.id, description: s.description ?? '' }));
+  // Dự án cũ: màu / mood → ô màu mới
+  if (!base.colors && base.mood) base.colors = base.mood;
+  return base;
+}
+
+export interface QuickCatalog {
+  presets: PresetSummary[];
+  sections: { id: string; label: string; hint: string; place: string }[];
+  languages: { id: Language; label: string }[];
+  limits: { topic: number; brand: number; purpose: number; colors: number; font: number; sectionNote: number; notes: number };
 }
 
 export interface PresetSummary {
@@ -287,7 +328,7 @@ export const STEP_LABELS = ['Nghiệp vụ', 'Giao diện', 'Dựng prototype', 
 
 /** Các bước trên thanh tiến trình theo luồng của dự án */
 export function stepLabels(flow: Flow | undefined): readonly string[] {
-  if (flow === 'quick') return ['Mô tả', 'Landing page'];
+  if (flow === 'quick') return ['Cấu hình', 'Website'];
   if (flow === 'standard') return ['Câu hỏi', 'SRS', 'Dựng prototype', 'Hoàn tất'];
   return STEP_LABELS;
 }
@@ -318,7 +359,7 @@ export function stepOf(screen: Screen, flow?: Flow): number {
 
 /** Nhãn màn hình theo luồng (luồng chuẩn: một bộ câu hỏi, một SRS gộp) */
 export function screenLabel(screen: Screen, flow?: Flow): string {
-  if (flow === 'quick') return screen === 'done' ? 'Xem & sửa landing page' : 'Mô tả landing page';
+  if (flow === 'quick') return screen === 'done' ? 'Xem & sửa website' : 'Cấu hình website';
   if (flow === 'standard' && screen === 'business-qa') return 'Trả lời câu hỏi';
   if (flow === 'standard' && screen === 'ui-review') return 'Xem SRS';
   return SCREEN_LABELS[screen];

@@ -3,7 +3,7 @@ import fs from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { WORKSPACE_DIR } from './config.js';
-import { renderConcept } from './presets.js';
+import { ConceptSchema, renderConcept, type BriefChecks } from './presets.js';
 import {
   OTHER,
   PROJECT_TYPE_LABELS,
@@ -100,8 +100,10 @@ export async function createProject(name: string, projectType: ProjectType, flow
   const p: Project = {
     slug,
     name: name.trim(),
-    // Chế độ nhanh chỉ dành cho landing page
+    // Chế độ nhanh: website (nhiều trang), không SRS
     projectType: flow === 'quick' ? 'website' : projectType,
+    // Tên dự án điền sẵn vào ô thương hiệu của màn hình cấu hình (BA sửa được)
+    ...(flow === 'quick' ? { concept: ConceptSchema.parse({ brand: name.trim().slice(0, 120) }) } : {}),
     flow,
     createdAt: now,
     updatedAt: now,
@@ -117,16 +119,17 @@ export async function createProject(name: string, projectType: ProjectType, flow
 }
 
 /** Ghi yêu cầu ban đầu ra request.md để skill đọc. */
-export async function writeRequestFile(p: Project) {
+export async function writeRequestFile(p: Project, checks?: BriefChecks) {
   const type = projectTypeOf(p);
-  const label = p.flow === 'quick' ? 'Landing page — chế độ nhanh (không có SRS)' : `${PROJECT_TYPE_LABELS[type]} (\`${type}\`)`;
+  const label = p.flow === 'quick' ? 'Website nhiều trang — chế độ nhanh (không có SRS)' : `${PROJECT_TYPE_LABELS[type]} (\`${type}\`)`;
   await fs.writeFile(
     path.join(projectDir(p.slug), 'request.md'),
     `# Yêu cầu ban đầu của BA\n\nLoại dự án: ${label}\n\n${p.request}\n`,
     'utf8',
   );
-  // Chế độ nhanh: mô tả + preset + mức chuyển động + section trong một file — AI đọc file này thay cho request.md
-  if (p.flow === 'quick') await fs.writeFile(path.join(projectDir(p.slug), 'concept.md'), renderConcept(p.request, p.concept), 'utf8');
+  // Chế độ nhanh: toàn bộ cấu hình (chủ đề, thương hiệu, mục đích, phong cách, chuyển động, ngôn ngữ, màu, font,
+  // section + mô tả, chú thích nguyên văn) + kết quả kiểm tra của tool trong một file — AI đọc file này thay cho request.md
+  if (p.flow === 'quick') await fs.writeFile(path.join(projectDir(p.slug), 'concept.md'), renderConcept(p.request, p.concept, checks), 'utf8');
 }
 
 /** Luồng chuẩn hỏi ít câu nên câu bỏ qua được AI tự đề xuất; luồng cũ ghi [CẦN XÁC NHẬN]. */

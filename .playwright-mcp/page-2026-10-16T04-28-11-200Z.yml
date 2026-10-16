@@ -1,0 +1,35 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - button "BA SRS & Prototype Builder" [ref=e6]:
+        - generic [ref=e7]: BA
+        - text: SRS & Prototype Builder
+      - generic [ref=e10]: Claude Max · vanvd@samset.net · claude-opus-5-5
+  - main [ref=e8]:
+    - generic [ref=e394]:
+      - generic [ref=e395]:
+        - button "← Dự án" [ref=e396]
+        - generic [ref=e397]:
+          - heading "An Nam Ký Test" [level=1] [ref=e398]
+          - paragraph [ref=e399]: Website · chế độ nhanh · Cấu hình website
+        - list [ref=e400]:
+          - listitem [ref=e401]:
+            - button "1 Cấu hình" [disabled] [ref=e402]:
+              - generic [ref=e403]: "1"
+              - generic [ref=e404]: Cấu hình
+            - generic [ref=e405]: →
+          - listitem [ref=e406]:
+            - button "2 Website" [disabled] [ref=e407]:
+              - generic [ref=e408]: "2"
+              - generic [ref=e409]: Website
+      - generic [ref=e705]:
+        - generic [ref=e706]:
+          - generic [ref=e707]:
+            - generic [ref=e711]:
+              - heading "AI đang dựng website nhiều trang" [level=2] [ref=e712]
+              - paragraph [ref=e713]: "Cấu hình: Minimal / Premium / Editorial · chuyển động Level 1 · Vietnamese — Tiếng Việt. AI lập sitemap, tìm ảnh theo từng trang, dựng các trang (motion.js + ui.js + atmos.js có sẵn), rồi tự chụp màn hình để rà và sửa…"
+            - generic [ref=e714]: 00:00
+          - group [ref=e715]:
+            - generic "Nhật ký AI (0)" [ref=e716] [cursor=pointer]
+            - paragraph [ref=e718]: Đang chờ…
+        - paragraph [ref=e719]: Bạn có thể đóng trình duyệt — tác vụ vẫn chạy trên máy, mở lại dự án để xem kết quả.

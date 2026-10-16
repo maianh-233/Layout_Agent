@@ -1,0 +1,7 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - button "BA SRS & Prototype Builder" [ref=e6]:
+      - generic [ref=e7]: BA
+      - text: SRS & Prototype Builder
+  - main [ref=e8]:
+    - paragraph [ref=e9]: Đang kiểm tra Claude Code trên máy…

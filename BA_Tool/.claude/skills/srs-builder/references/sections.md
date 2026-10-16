@@ -1,6 +1,6 @@
-# Thư viện section — landing page chế độ nhanh
+# Thư viện section — website chế độ nhanh
 
-Mỗi section có **id biến thể** (preset trong `concept.md` gợi ý theo id). Ghép 6–9 section, **không lặp cùng một nhóm bố cục liền nhau**. Khung chung theo layout-guide mục 1 (`mx-auto w-full max-w-screen-2xl px-4 sm:px-6 lg:px-10 2xl:px-16`); preset quyết định màu, chữ, khoảng trắng, mức chuyển động.
+Mỗi section có **id biến thể** (preset trong `concept.md` gợi ý theo id). Trang chủ thường 5–8 section, trang con 3–6 section; **không lặp cùng một nhóm bố cục liền nhau** trong một trang. Biến thể dành cho trang con / trang chi tiết ở mục "Trang con & trang chi tiết" cuối file. Khung chung theo layout-guide mục 1 (`mx-auto w-full max-w-screen-2xl px-4 sm:px-6 lg:px-10 2xl:px-16`); preset quyết định màu, chữ, khoảng trắng, mức chuyển động.
 
 Quy ước bắt buộc (để sửa riêng từng section và để lỗi một khối không lan ra cả trang):
 - Mỗi section là `<section id="<tên-ngắn>" data-section="<id-biến-thể>">`, header là `<header id="top">`, footer là `<footer id="footer">`. Id viết thường, không dấu, duy nhất.
@@ -103,3 +103,17 @@ Dùng thành phần của ui-guide: `data-switch` (giá), `data-carousel` (đán
 | `contact-split` | Trái: thông tin + bản đồ (iframe Google Maps) + giờ mở cửa; phải: `form[data-form]` |
 | `footer-big` | Wordmark tên thương hiệu cực lớn tràn khung ở đáy, phía trên 3–4 cột link / liên hệ |
 | `footer-minimal` | Một hàng: tên · liên hệ · mạng xã hội · © — trên nền tối liền với CTA cuối |
+
+## Trang con & trang chi tiết (website nhiều trang)
+
+| Id | Dùng cho | Cấu trúc |
+|---|---|---|
+| `page-hero` | Đầu mọi trang con | Tiêu đề trang lớn (font display) + 1 dòng dẫn, cao 40–55vh; ảnh nền / ảnh lệch tùy preset; breadcrumb nhỏ khi là trang chi tiết. Không lặp hero lớn của trang chủ |
+| `list-cards` | Services, Projects, Collections, Blog (trang danh sách) | Lưới thẻ (ảnh + tên + mô tả 1–2 dòng + link "xem chi tiết" tới trang chi tiết **đã tạo**); có thể thêm `data-filter-group` theo nhóm |
+| `teaser-row` | Trang chủ: dẫn sang trang danh sách | 2–3 mục nổi bật + link "Xem tất cả" tới trang riêng — không chép nguyên trang danh sách |
+| `detail-article` | Bài viết, case study, chi tiết dịch vụ | Cột chữ `max-w-prose` (ngày, tác giả / danh mục, tiêu đề, ảnh lớn, nội dung có h2 / trích dẫn / ảnh xen), cột phụ (mục lục hoặc thông tin nhanh) ở `lg+`; cuối bài: "bài / mục liên quan" + CTA |
+| `team-grid` | Team | Ảnh chân dung tỉ lệ đều (4:5) + tên + vai trò; hover hiện 1 câu giới thiệu. Không có ảnh người thật phù hợp → khối chữ cái đầu tên trên nền màu thương hiệu |
+| `process-steps` | Process | Các bước đánh số theo `timeline` hoặc lưới ngang có đường nối; mỗi bước: số · tên · mô tả ngắn |
+| `contact-page` | Contact | `contact-split` + giờ làm việc + FAQ ngắn (`data-accordion`) nếu BA chọn FAQ mà không có trang riêng |
+
+Header / footer dùng chung mọi trang (cùng markup); mục menu trang hiện tại `aria-current="page"`.

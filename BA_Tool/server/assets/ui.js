@@ -24,9 +24,10 @@
  *   UI.toast("Message", "success|error|info")
  *
  *  Form
- *   <form data-form="dat-lich" data-success="Thank you! We will call you back within 15 minutes.">
- *     kiểm tra required / type=email / type=tel / minlength / pattern, báo lỗi tiếng Việt dưới từng trường,
- *     nút gửi có trạng thái đang gửi, lưu localStorage, hiện thông báo; có [data-form-success] trong form thì thay form bằng khối đó.
+ *   <form data-form="dat-lich">
+ *     kiểm tra required / type=email / type=tel / minlength / pattern, báo lỗi theo <html lang> (en / vi / zh / ja) dưới từng trường,
+ *     nút có trạng thái đang kiểm tra, lưu localStorage, hiện thông báo BẢN DEMO (không có backend nên không báo "đã gửi");
+ *     có [data-form-success] trong form thì thay form bằng khối đó (nội dung khối phải nói rõ là bản demo).
  */
 (function () {
   if (window.UI) return;
@@ -597,22 +598,41 @@
   }
 
   // ---------- Form ----------
-  var MSG = {
-    required: 'Please fill in this field',
-    choose: 'Please select an option',
-    email: 'Please enter a valid email (e.g. name@gmail.com)',
-    tel: 'Please enter a valid phone number (10 digits, starting with 0)',
-    min: function (n) { return 'At least ' + n + ' characters required'; },
-    pattern: 'Invalid format',
-    check: 'Please check this box',
+  // Thông báo theo <html lang> (en / vi / zh / ja). Form chưa có backend → không báo "đã gửi thành công".
+  var LANG = (document.documentElement.getAttribute('lang') || 'en').slice(0, 2).toLowerCase();
+  var I18N = {
+    en: {
+      required: 'Please fill in this field', choose: 'Please select an option', email: 'Please enter a valid email (e.g. name@example.com)',
+      tel: 'Please enter a valid phone number', min: function (n) { return 'At least ' + n + ' characters required'; },
+      pattern: 'Invalid format', check: 'Please check this box', sending: 'Checking…',
+      demo: 'Demo form: your details look good, but nothing was sent — this website is not connected to a server yet.',
+    },
+    vi: {
+      required: 'Vui lòng nhập thông tin này', choose: 'Vui lòng chọn một mục', email: 'Email chưa đúng định dạng (ví dụ ten@gmail.com)',
+      tel: 'Số điện thoại chưa đúng (10 số, bắt đầu bằng 0)', min: function (n) { return 'Cần ít nhất ' + n + ' ký tự'; },
+      pattern: 'Định dạng chưa đúng', check: 'Vui lòng đánh dấu ô này', sending: 'Đang kiểm tra…',
+      demo: 'Form bản demo: thông tin hợp lệ nhưng chưa được gửi đi — website chưa kết nối máy chủ.',
+    },
+    zh: {
+      required: '请填写此项', choose: '请选择一项', email: '请输入有效的电子邮箱', tel: '请输入有效的电话号码',
+      min: function (n) { return '至少需要 ' + n + ' 个字符'; }, pattern: '格式不正确', check: '请勾选此项', sending: '正在检查…',
+      demo: '演示表单：信息格式正确，但尚未发送——本网站尚未连接服务器。',
+    },
+    ja: {
+      required: 'この項目を入力してください', choose: '項目を選択してください', email: '有効なメールアドレスを入力してください', tel: '有効な電話番号を入力してください',
+      min: function (n) { return n + '文字以上で入力してください'; }, pattern: '形式が正しくありません', check: 'チェックを入れてください', sending: '確認中…',
+      demo: 'デモフォームです：入力内容は有効ですが、送信はされていません（サーバー未接続）。',
+    },
   };
+  var MSG = I18N[LANG] || I18N.en;
   function fieldError(f) {
     var v = (f.value || '').trim();
     if (f.type === 'checkbox') return f.required && !f.checked ? MSG.check : '';
     if (f.required && !v) return f.tagName === 'SELECT' ? MSG.choose : MSG.required;
     if (!v) return '';
     if (f.type === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v)) return MSG.email;
-    if (f.type === 'tel' && !/^(\+?84|0)(3|5|7|8|9)\d{8}$/.test(v.replace(/[\s.-]/g, ''))) return MSG.tel;
+    var tel = v.replace(/[\s().-]/g, '');
+    if (f.type === 'tel' && !(LANG === 'vi' ? /^(\+?84|0)(3|5|7|8|9)\d{8}$/ : /^\+?\d{7,15}$/).test(tel)) return MSG.tel;
     if (f.minLength > 0 && v.length < f.minLength) return MSG.min(f.minLength);
     if (f.pattern && !new RegExp('^(?:' + f.pattern + ')$').test(v)) return f.title || MSG.pattern;
     return '';
@@ -654,7 +674,7 @@
       if (bad) { bad.focus(); return; }
       var btn = el.querySelector('[type=submit],button:not([type=button])');
       var label = btn && btn.innerHTML;
-      if (btn) { btn.disabled = true; btn.innerHTML = '<span class="ui-spin"></span>Sending…'; }
+      if (btn) { btn.disabled = true; btn.innerHTML = '<span class="ui-spin"></span>' + MSG.sending; }
       setTimeout(function () {
         var data = {};
         fields().forEach(function (f) { if (f.name) data[f.name] = f.type === 'checkbox' ? f.checked : f.value; });
@@ -671,7 +691,8 @@
           Array.prototype.forEach.call(el.children, function (c) { if (c !== ok) c.hidden = true; });
           ok.hidden = false;
         } else el.reset();
-        toast(el.getAttribute('data-success') || 'Sent successfully! We will get back to you soon.', 'success');
+        // Không có backend: báo rõ là bản demo (data-success chỉ dùng cho câu báo demo riêng của trang)
+        toast(el.getAttribute('data-success') || MSG.demo, 'info');
         var d = el.closest('dialog');
         if (d && d.open) setTimeout(function () { closeModal(d); }, 1200);
       }, reduce ? 200 : 900);
